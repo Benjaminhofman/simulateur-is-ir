@@ -522,7 +522,6 @@ function coutSiToutSorti(res, isIS) {
   const cotis_comp = brut_comp - net_entreprise;
   const ir_comp    = calcIR(net_entreprise);
   const surcout    = cotis_comp + ir_comp;
-  console.log(net_entreprise, brut_comp, cotis_comp, ir_comp, surcout);
   return surcout;
 }
 
@@ -667,20 +666,6 @@ function update() {
   const couts   = results.map(r => coutTotal(r.res));
   const minCout = Math.min(...couts);
   const maxCout = Math.max(...couts);
-
-  // Comparaison informative « si tout sorti ». L'EURL/IS peut rester moins chère
-  // que l'EI/IR même en sortant tout, à cause du taux réduit d'IS à 15% :
-  // c'est un avantage structurel réel, pas une incohérence du modèle.
-  const eiIr   = results.find(r => r.id === 'ei_ir');
-  const eurlIs = results.find(r => r.id === 'eurl_is');
-  if (eiIr && eurlIs) {
-    const coutEiIr = coutTotal(eiIr.res);
-    const coutSortiEurlIs = coutTotal(eurlIs.res) + coutSiToutSorti(eurlIs.res, true);
-    const ecart = coutSortiEurlIs - coutEiIr;
-    console.info('Si tout sorti — EI/IR : ' + Math.round(coutEiIr) +
-      ' € · EURL/IS : ' + Math.round(coutSortiEurlIs) + ' € (écart ' +
-      (ecart >= 0 ? '+' : '') + Math.round(ecart) + ' €)');
-  }
 
   // VERDICT GRID
   const grid = document.getElementById('verdict-grid');
