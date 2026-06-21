@@ -468,8 +468,10 @@ function calcEI_IS(benefice, distrib, parts) {
   const remun = revenu_net * (distrib / 100);
   const cotis_remun = calcCotisTNS(calcAbattement(remun));
   
-  // Résultat fiscal IS = bénéfice - rémunération (cotisations incluses dans remun côté entreprise)
-  const resultat_is = Math.max(0, benefice - remun);
+  // Résultat fiscal IS = CA brut reconstitué - rémunération - cotisations sur rémunération
+  const brut = benefice;
+  const resultat_is = Math.max(0, brut - remun - cotis_remun);
+  console.log(brut, remun, cotis_remun, resultat_is);
   const is_du = Math.min(resultat_is, IS_SEUIL) * IS_REDUIT +
                 Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
   const benefice_apres_is = resultat_is - is_du;
@@ -497,8 +499,10 @@ function calcEURL_IS(benefice, distrib, parts) {
   const remun = revenu_net * (distrib / 100);
   const cotis_remun = calcCotisTNS(calcAbattement(remun));
 
-  // Résultat fiscal IS = bénéfice - rémunération (cotisations incluses dans remun côté entreprise)
-  const resultat_is = Math.max(0, benefice - remun);
+  // Résultat fiscal IS = CA brut reconstitué - rémunération - cotisations sur rémunération
+  const brut = benefice;
+  const resultat_is = Math.max(0, brut - remun - cotis_remun);
+  console.log(brut, remun, cotis_remun, resultat_is);
   const is_du = Math.min(resultat_is, IS_SEUIL) * IS_REDUIT +
                 Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
   const benefice_apres_is = resultat_is - is_du;
