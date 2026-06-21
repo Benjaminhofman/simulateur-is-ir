@@ -462,8 +462,10 @@ function calcEURL_IR(benefice, distrib, parts) {
 }
 
 function calcEI_IS(benefice, distrib, parts) {
-  // Split : rémunération = bénéfice × distrib
-  const remun = benefice * (distrib / 100);
+  // Le brut ne sert qu'à calculer les cotisations TNS totales (scénario IR).
+  // La rémunération IS est calculée sur le revenu net souhaité, pas sur le brut reconstitué.
+  const revenu_net = benefice - calcCotisTNS(calcAbattement(benefice));
+  const remun = revenu_net * (distrib / 100);
   const cotis_remun = calcCotisTNS(calcAbattement(remun));
   
   // Résultat fiscal IS = bénéfice - rémunération (cotisations incluses dans remun côté entreprise)
@@ -489,7 +491,10 @@ function calcEI_IS(benefice, distrib, parts) {
 }
 
 function calcEURL_IS(benefice, distrib, parts) {
-  const remun = benefice * (distrib / 100);
+  // Le brut ne sert qu'à calculer les cotisations TNS totales (scénario IR).
+  // La rémunération IS est calculée sur le revenu net souhaité, pas sur le brut reconstitué.
+  const revenu_net = benefice - calcCotisTNS(calcAbattement(benefice));
+  const remun = revenu_net * (distrib / 100);
   const cotis_remun = calcCotisTNS(calcAbattement(remun));
 
   // Résultat fiscal IS = bénéfice - rémunération (cotisations incluses dans remun côté entreprise)
