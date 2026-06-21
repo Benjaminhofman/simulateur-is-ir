@@ -306,15 +306,6 @@
       </div>
 
       <div class="field">
-        <label>Autres revenus du foyer</label>
-        <div class="field-value" id="val-autres">0 €</div>
-        <input type="range" id="rng-autres" min="0" max="100000" step="1000" value="0">
-        <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);margin-top:4px;">
-          <span>0</span><span>100k</span>
-        </div>
-      </div>
-
-      <div class="field">
         <label>Part souhaitée en revenu (distribution)</label>
         <div class="field-value" id="val-distrib">70%</div>
         <input type="range" id="rng-distrib" min="10" max="100" step="5" value="70">
@@ -449,7 +440,7 @@ function calcIR(revenu) {
 
 // ─── CALCUL PAR RÉGIME ───────────────────────────────────────────────────────
 
-function calcEI_IR(benefice, distrib, autres, parts) {
+function calcEI_IR(benefice, distrib, parts) {
   // Tout le bénéfice = revenu exploitant, cotisations sur bénéfice
   const cotis = calcCotisTNS(calcAbattement(benefice));
   // IR au barème progressif sur le revenu net d'activité
@@ -465,12 +456,12 @@ function calcEI_IR(benefice, distrib, autres, parts) {
   };
 }
 
-function calcEURL_IR(benefice, distrib, autres, parts) {
+function calcEURL_IR(benefice, distrib, parts) {
   // Identique EI/IR : transparence, rémunération non déductible
-  return calcEI_IR(benefice, distrib, autres, parts);
+  return calcEI_IR(benefice, distrib, parts);
 }
 
-function calcEI_IS(benefice, distrib, autres, parts) {
+function calcEI_IS(benefice, distrib, parts) {
   // Split : rémunération = bénéfice × distrib
   const remun = benefice * (distrib / 100);
   const cotis_remun = calcCotisTNS(calcAbattement(remun));
@@ -497,7 +488,7 @@ function calcEI_IS(benefice, distrib, autres, parts) {
   };
 }
 
-function calcEURL_IS(benefice, distrib, autres, parts) {
+function calcEURL_IS(benefice, distrib, parts) {
   const remun = benefice * (distrib / 100);
   const cotis_remun = calcCotisTNS(calcAbattement(remun));
 
@@ -568,7 +559,7 @@ const REGIMES = [
 
 let chart = null;
 
-function buildChart(benefice_actuel, distrib, autres, parts) {
+function buildChart(benefice_actuel, distrib, parts) {
   const ctx = document.getElementById('chart-main').getContext('2d');
   
   const steps = [];
@@ -576,7 +567,7 @@ function buildChart(benefice_actuel, distrib, autres, parts) {
   
   const datasets = REGIMES.map(r => {
     const data = steps.map(b => {
-      const res = r.fn(b, distrib, autres, parts);
+      const res = r.fn(b, distrib, parts);
       return Math.round(res.net_dispo);
     });
     return {
@@ -680,7 +671,6 @@ function buildLegend() {
 
 function update() {
   const revenu_net = +document.getElementById('rng-benefice').value;
-  const autres   = +document.getElementById('rng-autres').value;
   const distrib  = +document.getElementById('rng-distrib').value;
   const parts    = 1;
 
@@ -695,13 +685,12 @@ function update() {
 
   document.getElementById('val-benefice').textContent = fmt(revenu_net);
   document.getElementById('val-ca-reconstitue').textContent = fmt(brut);
-  document.getElementById('val-autres').textContent   = fmt(autres);
   document.getElementById('val-distrib').textContent  = distrib + '%';
 
   // Calcul des 4 régimes
   const results = REGIMES.map(r => ({
     ...r,
-    res: r.fn(benefice, distrib, autres, parts),
+    res: r.fn(benefice, distrib, parts),
   }));
 
   // Métrique de comparaison : coût total des prélèvements (le plus bas gagne)
@@ -761,12 +750,12 @@ function update() {
   }).join('');
 
   // GRAPHIQUE
-  buildChart(benefice, distrib, autres, parts);
+  buildChart(benefice, distrib, parts);
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 
-['rng-benefice','rng-autres','rng-distrib'].forEach(id =>
+['rng-benefice','rng-distrib'].forEach(id =>
   document.getElementById(id).addEventListener('input', update)
 );
 
