@@ -618,13 +618,14 @@ function coutTotal(res) {
 
 // Coût total si l'on distribue aussi tout le capital resté en société (dividendes).
 // Pour l'IR : déjà tout sorti → identique au coût total.
-// Pour l'IS : on ajoute le PFU sur le net entreprise + les cotisations TNS
-// sur la part de dividendes dépassant le seuil de 10%.
-function coutSiToutSorti(res, isIS) {
+// Pour l'IS (option barème) : l'IR des dividendes est calculé au TMI sélectionné
+// (et remplace le PFU forfaitaire), plus les cotisations TNS sur la part de
+// dividendes dépassant le seuil de 10%.
+function coutSiToutSorti(res, isIS, tmi) {
   if (!isIS) return coutTotal(res);
-  const pfuSortie   = res.net_entreprise * PFU;
+  const irSortie    = res.net_entreprise * tmi;
   const cotisSortie = calcCotisTNS(Math.max(0, res.net_entreprise - (res.seuil_div_tns || 0)));
-  return coutTotal(res) + pfuSortie + cotisSortie;
+  return coutTotal(res) + irSortie + cotisSortie;
 }
 
 const REGIMES = [
@@ -814,7 +815,7 @@ function update() {
   tbody.innerHTML = results.map(r => {
     const cout      = coutTotal(r.res);
     const isISReg   = r.id.endsWith('_is');
-    const siTout    = coutSiToutSorti(r.res, isISReg);
+    const siTout    = coutSiToutSorti(r.res, isISReg, tmi);
     const isWinner  = cout === minCout;
     const isWorst   = cout === maxCout;
     return `
