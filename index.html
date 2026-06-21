@@ -278,11 +278,6 @@
     font-size: 13px;
     color: var(--blanc2);
   }
-  .vcard-garde {
-    font-size: 13px;
-    color: var(--gris4);
-    margin-top: 6px;
-  }
   .veco {
     align-self: center;
     text-align: center;
@@ -744,14 +739,12 @@ function update() {
 
   const vcard = (r, cout, borderColor, isWinner) => {
     const taux  = r.res.brut > 0 ? cout / r.res.brut * 100 : 0;
-    const garde = revenu_net - r.res.ir;
     return `
       <div class="vcard" style="border-color:${borderColor}">
         ${isWinner ? `<div class="vcard-badge">✓ Plus avantageux</div>` : ''}
         <div class="vcard-label">${r.label}</div>
         <div class="vcard-cout">${fmt(cout)}</div>
         <div class="vcard-taux">taux effectif ${fmtPct(taux)}</div>
-        <div class="vcard-garde">vous gardez ${fmtK(garde)} cette année</div>
       </div>`;
   };
 
@@ -791,18 +784,6 @@ function update() {
       </tr>
     `;
   }).join('');
-
-  // Ligne de synthèse : net final dans les poches si tout sorti en salaire
-  const netEi   = eiR   ? netFinal(eiR.res, false)  : 0;
-  const netEurl = eurlR ? netFinal(eurlR.res, true) : 0;
-  const diff    = Math.abs(netEi - netEurl);
-  tbody.innerHTML += `
-    <tr style="border-top:2px solid var(--gris3);background:var(--gris1);">
-      <td colspan="8" style="font-weight:600;color:var(--blanc);font-family:'Inter',sans-serif;font-size:12px;text-align:left;line-height:1.6;">
-        En sortant tout en salaire, vous gardez ${fmtK(netEi)} avec l'EI contre ${fmtK(netEurl)} avec l'EURL/IS — soit ${fmtK(diff)} de différence.
-      </td>
-    </tr>
-  `;
 
   // GRAPHIQUE
   buildChart(revenu_net, distrib, parts);
