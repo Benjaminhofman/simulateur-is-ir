@@ -511,7 +511,26 @@ function calcCotisTNS(assiette) {
   // Retraite complémentaire deux tranches
   const retcomp_t1 = Math.min(assiette, PASS) * 0.07;
   const retcomp_t2 = Math.min(Math.max(0, assiette - PASS), PASS * 3) * 0.08;
-  // postes à compléter
+
+  // Invalidité-décès
+  const invalide = Math.min(assiette, PASS) * 0.013;
+
+  // Allocations familiales progressives
+  let alloc;
+  if (assiette < PASS * 1.10) alloc = 0;
+  else if (assiette < PASS * 1.40) alloc = assiette * 0.017;
+  else alloc = assiette * 0.031;
+
+  // Formation professionnelle
+  const cfp = 116;
+
+  const sous_total = maladie + retraite_t1 + retraite_t2
+                   + retcomp_t1 + retcomp_t2 + invalide + alloc + cfp;
+
+  // CSG-CRDS sur l'assiette majorée des cotisations
+  const csg = (assiette + sous_total) * 0.097;
+
+  return sous_total + csg;
 }
 
 // ─── CALCUL PAR RÉGIME ───────────────────────────────────────────────────────
