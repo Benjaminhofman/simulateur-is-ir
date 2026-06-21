@@ -366,18 +366,6 @@
       </div>
 
       <div class="field">
-        <label>Nombre de parts fiscales</label>
-        <select id="sel-parts">
-          <option value="1">1 part (célibataire)</option>
-          <option value="1.5">1,5 parts</option>
-          <option value="2" selected>2 parts (couple sans enfant)</option>
-          <option value="2.5">2,5 parts</option>
-          <option value="3">3 parts</option>
-          <option value="4">4 parts</option>
-        </select>
-      </div>
-
-      <div class="field">
         <label>Tranche marginale d'imposition (TMI)</label>
         <select id="sel-tmi">
           <option value="0">0 %</option>
@@ -478,8 +466,9 @@ const BAREME = [
   { seuil: Infinity, taux: 0.45 },
 ];
 
-function calcIR(revenuImposable, parts) {
-  // revenu par part
+function calcIR(revenuImposable) {
+  // nombre de parts fiscales fixé à 1
+  const parts = 1;
   const rpp = revenuImposable / parts;
   let impot = 0;
   let prev = 0;
@@ -543,7 +532,7 @@ function calcEI_IR(benefice, distrib, autres, parts) {
   const cotis = calcCotisTNS(benefice);
   const revenu_net = benefice - cotis;
   const revenu_imposable = Math.max(0, revenu_net + autres);
-  const ir_total = calcIR(revenu_imposable, parts);
+  const ir_total = calcIR(revenu_imposable);
   // IR imputé à l'activité = proportion du revenu d'activité
   const part_activite = revenu_net / revenu_imposable || 0;
   const ir_activite = ir_total * part_activite;
@@ -808,7 +797,7 @@ function update() {
   const benefice = +document.getElementById('rng-benefice').value;
   const autres   = +document.getElementById('rng-autres').value;
   const distrib  = +document.getElementById('rng-distrib').value;
-  const parts    = +document.getElementById('sel-parts').value;
+  const parts    = 1;
   const capital  = +document.getElementById('inp-capital').value || 1000;
   const tmi      = +document.getElementById('sel-tmi').value;
 
@@ -904,7 +893,6 @@ function update() {
 ['rng-benefice','rng-autres','rng-distrib'].forEach(id =>
   document.getElementById(id).addEventListener('input', update)
 );
-document.getElementById('sel-parts').addEventListener('change', update);
 document.getElementById('sel-tmi').addEventListener('change', update);
 document.getElementById('inp-capital').addEventListener('input', update);
 
