@@ -376,6 +376,12 @@
           <tbody id="detail-tbody"></tbody>
         </table>
       </div>
+      <div class="info-box" style="margin-top:16px;padding:14px 16px;border:1px solid var(--gris2);background:var(--gris1);font-size:12px;line-height:1.7;color:var(--blanc2);">
+        En EI/IR, le gérant dispose de <span id="info-revenu-net"></span> à titre personnel (avant IR).
+        En EURL/IS avec <span id="info-distrib"></span>% de distribution, il perçoit <span id="info-remun"></span>
+        et la société conserve <span id="info-reserve"></span> en réserve. Si la société lui versait
+        <span id="info-revenu-net-2"></span> de rémunération, charges sociales et IR seraient identiques à l'EI/IR.
+      </div>
     </div>
 
     <!-- GRAPHIQUE -->
@@ -755,6 +761,15 @@ function update() {
       </tr>
     `;
   }).join('');
+
+  // INFO-BOX — montants dynamiques selon la saisie
+  const remun_nette    = revenu_net * (distrib / 100);
+  const net_entreprise = eurlR.res.net_entreprise;
+  document.getElementById('info-revenu-net').textContent   = fmt(revenu_net);
+  document.getElementById('info-revenu-net-2').textContent = fmt(revenu_net);
+  document.getElementById('info-distrib').textContent      = distrib;
+  document.getElementById('info-remun').textContent        = fmt(remun_nette);
+  document.getElementById('info-reserve').textContent      = fmt(net_entreprise);
 
   // GRAPHIQUE
   buildChart(revenu_net, distrib, parts);
