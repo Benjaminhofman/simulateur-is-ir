@@ -376,6 +376,17 @@
           <option value="4">4 parts</option>
         </select>
       </div>
+
+      <div class="field">
+        <label>Tranche marginale d'imposition (TMI)</label>
+        <select id="sel-tmi">
+          <option value="0">0 %</option>
+          <option value="0.11">11 %</option>
+          <option value="0.30" selected>30 %</option>
+          <option value="0.41">41 %</option>
+          <option value="0.45">45 %</option>
+        </select>
+      </div>
     </div>
 
     <div>
@@ -516,7 +527,7 @@ function calcEURL_IR(benefice, distrib, autres, parts) {
   return calcEI_IR(benefice, distrib, autres, parts);
 }
 
-function calcEI_IS(benefice, distrib, autres, parts, capital) {
+function calcEI_IS(benefice, distrib, autres, parts, capital, tmi) {
   // Split : rémunération = bénéfice × distrib
   const remun = benefice * (distrib / 100);
   const cotis_remun = calcCotisTNS(remun);
@@ -533,11 +544,9 @@ function calcEI_IS(benefice, distrib, autres, parts, capital) {
   // Seuil 10% du bénéfice net (EI/IS)
   const seuil_div_tns = resultat_is * 0.10;
   
-  // IR sur rémunération
-  const revenu_ir = Math.max(0, remun - cotis_remun + autres);
-  const ir_total = calcIR(revenu_ir, parts);
-  const part_activite = (remun - cotis_remun) / revenu_ir || 0;
-  const ir_activite = ir_total * part_activite;
+  // IR sur rémunération nette : taux marginal (TMI) saisi par l'utilisateur
+  const remun_nette = Math.max(0, remun - cotis_remun);
+  const ir_activite = remun_nette * tmi;
   
   const net_dispo = remun - cotis_remun - ir_activite;
   const net_entreprise = benefice_apres_is;
@@ -553,7 +562,7 @@ function calcEI_IS(benefice, distrib, autres, parts, capital) {
   };
 }
 
-function calcEURL_IS(benefice, distrib, autres, parts, capital) {
+function calcEURL_IS(benefice, distrib, autres, parts, capital, tmi) {
   const remun = benefice * (distrib / 100);
   const cotis_remun = calcCotisTNS(remun);
 
@@ -570,11 +579,9 @@ function calcEURL_IS(benefice, distrib, autres, parts, capital) {
   // Ici on laisse le bénéfice après IS en entreprise (net_entreprise)
   // et on ne verse pas de dividendes supplémentaires (le curseur distrib pilote la remun)
   
-  // IR sur rémunération nette
-  const revenu_ir = Math.max(0, remun - cotis_remun + autres);
-  const ir_total = calcIR(revenu_ir, parts);
-  const part_activite = (remun - cotis_remun) / revenu_ir || 0;
-  const ir_activite = ir_total * part_activite;
+  // IR sur rémunération nette : taux marginal (TMI) saisi par l'utilisateur
+  const remun_nette = Math.max(0, remun - cotis_remun);
+  const ir_activite = remun_nette * tmi;
   
   const net_dispo = remun - cotis_remun - ir_activite;
   const net_entreprise = benefice_apres_is;
@@ -631,7 +638,7 @@ const REGIMES = [
 
 let chart = null;
 
-function buildChart(benefice_actuel, distrib, autres, parts, capital) {
+function buildChart(benefice_actuel, distrib, autres, parts, capital, tmi) {
   const ctx = document.getElementById('chart-main').getContext('2d');
   
   const steps = [];
@@ -639,7 +646,7 @@ function buildChart(benefice_actuel, distrib, autres, parts, capital) {
   
   const datasets = REGIMES.map(r => {
     const data = steps.map(b => {
-      const res = r.fn(b, distrib, autres, parts, capital);
+      const res = r.fn(b, distrib, autres, parts, capital, tmi);
       return Math.round(res.net_dispo);
     });
     return {
@@ -741,12 +748,12 @@ function buildLegend() {
 
 // ─── SEUIL DE BASCULE ────────────────────────────────────────────────────────
 
-function findSeuilBascule(distrib, autres, parts, capital) {
+function findSeuilBascule(distrib, autres, parts, capital, tmi) {
   // Cherche où EURL/IS dépasse EURL/IR
   let seuilIS = null;
   for (let b = 15000; b <= 300000; b += 1000) {
-    const ir = calcEURL_IR(b, distrib, autres, parts, capital).net_dispo;
-    const is = calcEURL_IS(b, distrib, autres, parts, capital).net_dispo;
+    const ir = calcEURL_IR(b, distrib, autres, parts, capital, tmi).net_dispo;
+    const is = calcEURL_IS(b, distrib, autres, parts, capital, tmi).net_dispo;
     if (is > ir && seuilIS === null) {
       seuilIS = b;
       break;
@@ -763,6 +770,7 @@ function update() {
   const distrib  = +document.getElementById('rng-distrib').value;
   const parts    = +document.getElementById('sel-parts').value;
   const capital  = +document.getElementById('inp-capital').value || 1000;
+  const tmi      = +document.getElementById('sel-tmi').value;
 
   document.getElementById('val-benefice').textContent = fmt(benefice);
   document.getElementById('val-autres').textContent   = fmt(autres);
@@ -771,7 +779,7 @@ function update() {
   // Calcul des 4 régimes
   const results = REGIMES.map(r => ({
     ...r,
-    res: r.fn(benefice, distrib, autres, parts, capital),
+    res: r.fn(benefice, distrib, autres, parts, capital, tmi),
   }));
 
   // Métrique de comparaison : coût total des prélèvements (le plus bas gagne)
@@ -827,7 +835,7 @@ function update() {
   }).join('');
 
   // SEUIL
-  const seuil = findSeuilBascule(distrib, autres, parts, capital);
+  const seuil = findSeuilBascule(distrib, autres, parts, capital, tmi);
   const seuilEl = document.getElementById('seuil-texte');
   if (seuil === null) {
     seuilEl.innerHTML = `En dessous de 300k€ de bénéfice, l'IS n'est pas avantageux avec ces paramètres.`;
@@ -844,7 +852,7 @@ function update() {
   }
 
   // GRAPHIQUE
-  buildChart(benefice, distrib, autres, parts, capital);
+  buildChart(benefice, distrib, autres, parts, capital, tmi);
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
@@ -853,6 +861,7 @@ function update() {
   document.getElementById(id).addEventListener('input', update)
 );
 document.getElementById('sel-parts').addEventListener('change', update);
+document.getElementById('sel-tmi').addEventListener('change', update);
 document.getElementById('inp-capital').addEventListener('input', update);
 
 buildLegend();
