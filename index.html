@@ -330,7 +330,6 @@
         <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);margin-top:4px;">
           <span>15k</span><span>300k</span>
         </div>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gris4);margin-top:8px;">CA équivalent : <span id="val-ca-reconstitue">—</span></div>
       </div>
 
       <div class="field">
@@ -718,11 +717,7 @@ function update() {
   const distrib  = +document.getElementById('rng-distrib').value;
   const parts    = 1;
 
-  // CA brut social reconstitué à partir du revenu net souhaité (pour affichage).
-  const brut = reconstitueBrut(revenu_net);
-
   document.getElementById('val-benefice').textContent = fmt(revenu_net);
-  document.getElementById('val-ca-reconstitue').textContent = fmtK(brut);
   document.getElementById('val-distrib').textContent  = distrib + '%';
 
   // Calcul des 2 régimes comparés (EI/IR vs EURL/IS) sur le même revenu net souhaité.
