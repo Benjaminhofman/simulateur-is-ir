@@ -494,8 +494,11 @@ function calcIR(revenuImposable, parts) {
   return Math.max(0, impot * parts);
 }
 
-function calcCotisTNS(assiette) {
-  // assiette = revenu × 0.74 déjà calculé en amont
+function calcCotisTNS(revenu) {
+  // Abattement forfaitaire de 26% sur le revenu, plafonné à 62478€ et planché à 845.86€
+  const abattement_brut = revenu * 0.26;
+  const abattement = Math.max(845.86, Math.min(abattement_brut, 62478));
+  const assiette = revenu - abattement;
   const PASS = 46368;
 
   // Maladie progressive
