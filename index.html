@@ -467,13 +467,24 @@ function calcCotisTNS(revenu) {
   return sous_total + csg;
 }
 
+// Barème progressif IR 2026 (revenus 2025), une part
+function calcIR(revenu) {
+  if (revenu <= 0) return 0;
+  let ir = 0;
+  if (revenu > 11600)  ir += Math.min(revenu - 11600,  17979) * 0.11;
+  if (revenu > 29579)  ir += Math.min(revenu - 29579,  54998) * 0.30;
+  if (revenu > 84577)  ir += Math.min(revenu - 84577,  97340) * 0.41;
+  if (revenu > 181917) ir += (revenu - 181917) * 0.45;
+  return ir;
+}
+
 // ─── CALCUL PAR RÉGIME ───────────────────────────────────────────────────────
 
 function calcEI_IR(benefice, distrib, autres, parts, capital, tmi) {
   // Tout le bénéfice = revenu exploitant, cotisations sur bénéfice
   const cotis = calcCotisTNS(benefice);
-  // IR sur le revenu net d'activité au taux marginal (TMI) sélectionné
-  const ir_activite = (benefice - cotis) * (tmi / 100);
+  // IR au barème progressif sur le revenu net d'activité
+  const ir_activite = calcIR(Math.max(0, benefice - cotis));
   const net_dispo = benefice - cotis - ir_activite;
   return {
     cotis: cotis,
