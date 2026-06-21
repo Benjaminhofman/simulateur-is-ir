@@ -497,8 +497,12 @@ function calcIR(revenu) {
 // EI à l'IR : tout le revenu net est perçu par l'exploitant.
 function calcEI_IR(revenu_net, distrib, parts) {
   const brut = reconstitueBrut(revenu_net);
-  const cotis = calcCotisTNS(calcAbattement(brut));
-  const ir = calcIR(revenu_net);
+  const assiette_sociale = calcAbattement(brut);
+  const cotis = calcCotisTNS(assiette_sociale);
+  // CSG déductible (6,8% de l'assiette sociale) retirée de la base imposable IR
+  const csg_deductible = assiette_sociale * 0.068;
+  const base_ir = Math.max(0, revenu_net - csg_deductible);
+  const ir = calcIR(base_ir);
   return {
     cotis: cotis,
     is: 0,
@@ -515,11 +519,15 @@ function calcEURL_IS(revenu_net, distrib, parts) {
   const brut = reconstitueBrut(revenu_net);
   const remun_nette = revenu_net * (distrib / 100);
   const brut_remun = reconstitueBrut(remun_nette);
-  const cotis = calcCotisTNS(calcAbattement(brut_remun));
+  const assiette_sociale = calcAbattement(brut_remun);
+  const cotis = calcCotisTNS(assiette_sociale);
   const resultat_is = Math.max(0, brut - brut_remun);
   const is_du = Math.min(resultat_is, IS_SEUIL) * IS_REDUIT +
                 Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
-  const ir = calcIR(remun_nette);
+  // CSG déductible (6,8% de l'assiette sociale) retirée de la base imposable IR
+  const csg_deductible = assiette_sociale * 0.068;
+  const base_ir = Math.max(0, remun_nette - csg_deductible);
+  const ir = calcIR(base_ir);
   // net_entreprise jamais négatif (à distribution ~100% le résultat IS tombe à 0)
   const net_entreprise = Math.max(0, resultat_is - is_du);
   return {
