@@ -281,8 +281,8 @@
 <body>
 
 <header class="header">
-  <div class="header-title">IS vs IR</div>
-  <div class="header-sub">EI · EURL · Régime fiscal</div>
+  <div class="header-title">Combien vous coûte vraiment votre statut ?</div>
+  <div class="header-sub">Comparez EI et EURL/IS en 30 secondes — réforme 2026 intégrée</div>
   <span class="badge-2026">RÉFORME 2026</span>
 </header>
 
@@ -295,18 +295,17 @@
       <div class="section-label">Votre activité</div>
 
       <div class="field">
-        <label>Revenu net annuel (avant impôt)</label>
+        <label style="font-size:16px;font-weight:600;color:var(--blanc);">Votre revenu net annuel</label>
         <div class="field-value" id="val-benefice">60 000 €</div>
         <input type="range" id="rng-benefice" min="15000" max="300000" step="1000" value="60000">
         <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);margin-top:4px;">
           <span>15k</span><span>300k</span>
         </div>
-        <div style="font-size:11px;color:var(--gris4);margin-top:8px;line-height:1.5;">Votre bénéfice après déduction des cotisations sociales, avant IR</div>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blanc2);margin-top:8px;">CA reconstitué : <span id="val-ca-reconstitue">—</span></div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gris4);margin-top:8px;">CA équivalent : <span id="val-ca-reconstitue">—</span></div>
       </div>
 
       <div class="field">
-        <label>Part souhaitée en revenu (distribution)</label>
+        <label>Part versée en rémunération cette année</label>
         <div class="field-value" id="val-distrib">70%</div>
         <input type="range" id="rng-distrib" min="10" max="100" step="5" value="70">
         <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);margin-top:4px;">
@@ -660,7 +659,7 @@ function update() {
   const brut = reconstitueBrut(revenu_net);
 
   document.getElementById('val-benefice').textContent = fmt(revenu_net);
-  document.getElementById('val-ca-reconstitue').textContent = fmt(brut);
+  document.getElementById('val-ca-reconstitue').textContent = fmtK(brut);
   document.getElementById('val-distrib').textContent  = distrib + '%';
 
   // Calcul des 2 régimes comparés (EI/IR vs EURL/IS) sur le même revenu net souhaité.
