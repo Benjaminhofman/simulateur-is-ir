@@ -312,12 +312,14 @@
       <div class="section-label">Votre activité</div>
 
       <div class="field">
-        <label>Bénéfice brut annuel</label>
+        <label>Revenu net annuel (avant impôt)</label>
         <div class="field-value" id="val-benefice">60 000 €</div>
         <input type="range" id="rng-benefice" min="15000" max="300000" step="1000" value="60000">
         <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);margin-top:4px;">
           <span>15k</span><span>300k</span>
         </div>
+        <div style="font-size:11px;color:var(--gris4);margin-top:8px;line-height:1.5;">Votre bénéfice après déduction des cotisations sociales, avant IR</div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blanc2);margin-top:8px;">CA reconstitué : <span id="val-ca-reconstitue">—</span></div>
       </div>
 
       <div class="field">
@@ -415,11 +417,15 @@ const IS_NORMAL      = 0.25;
 const PFU            = 0.314;
 const ABATT_DIV_IR   = 0.40;   // abattement 40% dividendes option IR (non utilisé ici, on applique PFU par défaut)
 
-function calcCotisTNS(revenu) {
-  // Abattement forfaitaire de 26% sur le revenu, plafonné à 62478€ et planché à 845.86€
+// Abattement forfaitaire de 26% sur le revenu, plafonné à 62478€ et planché à 845.86€.
+// Retourne l'assiette nette (revenu - abattement) servant de base aux cotisations.
+function calcAbattement(revenu) {
   const abattement_brut = revenu * 0.26;
   const abattement = Math.max(845.86, Math.min(abattement_brut, 62478));
-  const assiette = revenu - abattement;
+  return revenu - abattement;
+}
+
+function calcCotisTNS(assiette) {
   const PASS = 46368;
 
   // Maladie taux plein 8.5% (réforme 2026)
@@ -472,7 +478,7 @@ function calcIR(revenu) {
 
 function calcEI_IR(benefice, distrib, autres, parts, capital) {
   // Tout le bénéfice = revenu exploitant, cotisations sur bénéfice
-  const cotis = calcCotisTNS(benefice);
+  const cotis = calcCotisTNS(calcAbattement(benefice));
   // IR au barème progressif sur le revenu net d'activité
   const ir_activite = calcIR(Math.max(0, benefice - cotis));
   const net_dispo = benefice - cotis - ir_activite;
@@ -494,7 +500,7 @@ function calcEURL_IR(benefice, distrib, autres, parts, capital) {
 function calcEI_IS(benefice, distrib, autres, parts, capital) {
   // Split : rémunération = bénéfice × distrib
   const remun = benefice * (distrib / 100);
-  const cotis_remun = calcCotisTNS(remun);
+  const cotis_remun = calcCotisTNS(calcAbattement(remun));
   
   // Résultat fiscal IS = bénéfice - rémunération (cotisations incluses dans remun côté entreprise)
   const resultat_is = Math.max(0, benefice - remun);
@@ -527,7 +533,7 @@ function calcEI_IS(benefice, distrib, autres, parts, capital) {
 
 function calcEURL_IS(benefice, distrib, autres, parts, capital) {
   const remun = benefice * (distrib / 100);
-  const cotis_remun = calcCotisTNS(remun);
+  const cotis_remun = calcCotisTNS(calcAbattement(remun));
 
   // Résultat fiscal IS = bénéfice - rémunération (cotisations incluses dans remun côté entreprise)
   const resultat_is = Math.max(0, benefice - remun);
@@ -588,8 +594,7 @@ function coutTotal(res) {
 function coutSiToutSorti(res, isIS) {
   if (!isIS) return coutTotal(res);
   const remun_comp = res.net_entreprise;
-  // calcCotisTNS applique déjà l'abattement 26% en interne
-  const cotis_comp = calcCotisTNS(remun_comp);
+  const cotis_comp = calcCotisTNS(calcAbattement(remun_comp));
   const ir_comp    = calcIR(Math.max(0, remun_comp - cotis_comp));
   return coutTotal(res) + cotis_comp + ir_comp;
 }
@@ -716,13 +721,23 @@ function buildLegend() {
 // ─── MISE À JOUR UI ──────────────────────────────────────────────────────────
 
 function update() {
-  const benefice = +document.getElementById('rng-benefice').value;
+  const revenu_net = +document.getElementById('rng-benefice').value;
   const autres   = +document.getElementById('rng-autres').value;
   const distrib  = +document.getElementById('rng-distrib').value;
   const parts    = 1;
   const capital  = +document.getElementById('inp-capital').value || 1000;
 
-  document.getElementById('val-benefice').textContent = fmt(benefice);
+  // Reconstitution du revenu brut social par approximations successives :
+  // revenu_brut = revenu_net + cotisations, avec cotisations = f(revenu_brut)
+  let brut = revenu_net * 1.45;
+  for (let i = 0; i < 10; i++) {
+    const cotis = calcCotisTNS(calcAbattement(brut));
+    brut = revenu_net + cotis;
+  }
+  const benefice = brut;
+
+  document.getElementById('val-benefice').textContent = fmt(revenu_net);
+  document.getElementById('val-ca-reconstitue').textContent = fmt(brut);
   document.getElementById('val-autres').textContent   = fmt(autres);
   document.getElementById('val-distrib').textContent  = distrib + '%';
 
