@@ -489,7 +489,9 @@ function calcIR(revenu) {
   if (revenu > 29579)  ir += Math.min(revenu - 29579,  54998) * 0.30;
   if (revenu > 84577)  ir += Math.min(revenu - 84577,  97340) * 0.41;
   if (revenu > 181917) ir += (revenu - 181917) * 0.45;
-  return ir;
+  // Décote 2026 (1 part) : réduit l'impôt des bas revenus
+  const decote = Math.max(0, 897 - 0.4525 * ir);
+  return Math.max(0, ir - decote);
 }
 
 // ─── CALCUL PAR RÉGIME ───────────────────────────────────────────────────────
