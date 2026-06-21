@@ -519,7 +519,7 @@ function coutSiToutSorti(res, isIS) {
   // net_entreprise est un montant net : on reconstitue son brut pour les cotisations
   const net_entreprise = res.net_entreprise;
   const brut_comp = reconstitueBrut(net_entreprise);
-  const cotis_comp = calcCotisTNS(calcAbattement(brut_comp));
+  const cotis_comp = brut_comp - net_entreprise;
   const ir_comp    = calcIR(net_entreprise);
   const surcout    = cotis_comp + ir_comp;
   console.log(net_entreprise, brut_comp, cotis_comp, ir_comp, surcout);
@@ -667,6 +667,20 @@ function update() {
   const couts   = results.map(r => coutTotal(r.res));
   const minCout = Math.min(...couts);
   const maxCout = Math.max(...couts);
+
+  // Assertion : sortir tout le capital d'une EURL/IS doit coûter au moins autant
+  // que l'EI/IR (qui distribue déjà tout). Sinon le modèle est incohérent.
+  const eiIr   = results.find(r => r.id === 'ei_ir');
+  const eurlIs = results.find(r => r.id === 'eurl_is');
+  if (eiIr && eurlIs) {
+    const coutEiIr = coutTotal(eiIr.res);
+    const coutSortiEurlIs = coutTotal(eurlIs.res) + coutSiToutSorti(eurlIs.res, true);
+    if (coutSortiEurlIs <= coutEiIr) {
+      console.error('Assertion échouée : EURL/IS coût total si tout sorti (' +
+        Math.round(coutSortiEurlIs) + ') devrait être > EI/IR coût total (' +
+        Math.round(coutEiIr) + ')');
+    }
+  }
 
   // VERDICT GRID
   const grid = document.getElementById('verdict-grid');
