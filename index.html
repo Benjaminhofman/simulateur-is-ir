@@ -422,7 +422,7 @@ const TAUX_TNS_MOY   = 0.40;   // taux moyen après abattement (~33-45%, on pren
 const IS_SEUIL       = 42500;
 const IS_REDUIT      = 0.15;
 const IS_NORMAL      = 0.25;
-const PFU            = 0.30;
+const PFU            = 0.314;
 const ABATT_DIV_IR   = 0.40;   // abattement 40% dividendes option IR (non utilisé ici, on applique PFU par défaut)
 
 function calcCotisTNS(revenu) {
@@ -593,12 +593,11 @@ function coutTotal(res) {
 
 // Coût total si l'on distribue aussi tout le capital resté en société (dividendes).
 // Pour l'IR : déjà tout sorti → identique au coût total.
-// Pour l'IS (option barème) : l'IR des dividendes est calculé au TMI sélectionné
-// (et remplace le PFU forfaitaire), plus les cotisations TNS sur la part de
-// dividendes dépassant le seuil de 10%.
+// Pour l'IS : les dividendes sont imposés au PFU (31,4%), plus les cotisations
+// TNS sur la part de dividendes dépassant le seuil de 10%.
 function coutSiToutSorti(res, isIS, tmi) {
   if (!isIS) return coutTotal(res);
-  const irSortie    = res.net_entreprise * (tmi / 100);
+  const irSortie    = res.net_entreprise * PFU;
   const cotisSortie = calcCotisTNS(Math.max(0, res.net_entreprise - (res.seuil_div_tns || 0)));
   return coutTotal(res) + irSortie + cotisSortie;
 }
