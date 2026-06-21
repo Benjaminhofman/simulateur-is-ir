@@ -231,47 +231,82 @@
 
   /* HIGHLIGHT GAGNANT */
   .verdict {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1px;
-    background: var(--gris2);
-    border: 1px solid var(--gris2);
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
   }
-  .verdict-cell {
+  .vcard {
+    flex: 1;
+    position: relative;
     background: var(--gris1);
-    padding: 20px;
+    border: 2px solid var(--gris3);
+    padding: 30px 24px 24px;
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
-  .verdict-cell.winner { background: #eef3ff; border: 1px solid #1a6ef5; }
-  .verdict-cell-label {
+  .vcard-badge {
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--vert);
+    color: #ffffff;
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 4px 12px;
+    white-space: nowrap;
+  }
+  .vcard-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
     letter-spacing: 0.12em;
     color: var(--gris4);
     text-transform: uppercase;
   }
-  .verdict-cell-regime {
+  .vcard-cout {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 38px;
+    line-height: 1.1;
+    color: var(--blanc);
+    letter-spacing: -1px;
+  }
+  .vcard-taux {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--blanc2);
+  }
+  .vcard-garde {
+    font-size: 13px;
+    color: var(--gris4);
+    margin-top: 6px;
+  }
+  .veco {
+    align-self: center;
+    text-align: center;
+    min-width: 96px;
+  }
+  .veco-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gris4);
+    margin-bottom: 4px;
+  }
+  .veco-val {
     font-family: 'Syne', sans-serif;
     font-weight: 700;
-    font-size: 14px;
-  }
-  .verdict-cell-montant {
-    font-family: 'DM Mono', monospace;
-    font-size: 20px;
-    font-weight: 500;
-  }
-  .verdict-cell-diff {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--vert);
+    font-size: 19px;
   }
 
   @media (max-width: 900px) {
     .main { grid-template-columns: 1fr; }
     .panel-left { border-right: none; border-bottom: 1px solid var(--gris2); }
-    .verdict { grid-template-columns: repeat(2, 1fr); }
+    .verdict { flex-direction: column; }
     .header { padding: 20px; }
     .panel-right { padding: 24px 20px; }
     .panel-left { padding: 24px 20px; }
@@ -673,26 +708,38 @@ function update() {
   const minCout = Math.min(...couts);
   const maxCout = Math.max(...couts);
 
-  // VERDICT GRID — coût courant uniquement (les infos « si tout sorti » sont dans le tableau)
+  // VERDICT — 2 cartes (EI/IR vs EURL/IS) + encadré « économie » au milieu
   const grid = document.getElementById('verdict-grid');
-  grid.innerHTML = results.map(r => {
-    const cout    = coutTotal(r.res);
-    const taux    = r.res.brut > 0 ? cout / r.res.brut * 100 : 0;
-    const isWinner = cout === minCout;
-    const isWorst  = cout === maxCout;
+  const eiR   = results.find(r => r.id === 'ei_ir');
+  const eurlR = results.find(r => r.id === 'eurl_is');
+  const coutEi   = coutTotal(eiR.res);
+  const coutEurl = coutTotal(eurlR.res);
+  const eurlAvantage = coutEurl < coutEi;   // EURL/IS moins chère qu'EI/IR ?
+  const economie = coutEi - coutEurl;        // > 0 si EURL/IS fait économiser
+
+  const vcard = (r, cout, borderColor, isWinner) => {
+    const taux  = r.res.brut > 0 ? cout / r.res.brut * 100 : 0;
+    const garde = revenu_net - r.res.ir;
     return `
-      <div class="verdict-cell ${isWinner ? 'winner' : ''}">
-        <div class="verdict-cell-label">${r.label}</div>
-        <div class="verdict-cell-montant" style="color:${isWinner ? 'var(--vert)' : isWorst ? 'var(--rouge)' : 'var(--blanc)'}">
-          ${fmt(cout)}
-        </div>
-        <div class="verdict-cell-diff" style="color:var(--blanc2)">taux effectif ${fmtPct(taux)}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);line-height:1.6;margin-top:6px">
-          net perso&nbsp;&nbsp;${fmt(r.res.net_dispo)}${r.res.net_entreprise > 0 ? `<br>net société&nbsp;&nbsp;${fmt(r.res.net_entreprise)}` : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
+      <div class="vcard" style="border-color:${borderColor}">
+        ${isWinner ? `<div class="vcard-badge">✓ Plus avantageux</div>` : ''}
+        <div class="vcard-label">${r.label}</div>
+        <div class="vcard-cout">${fmt(cout)}</div>
+        <div class="vcard-taux">taux effectif ${fmtPct(taux)}</div>
+        <div class="vcard-garde">vous gardez ${fmtK(garde)} cette année</div>
+      </div>`;
+  };
+
+  const ecoBox = `
+    <div class="veco">
+      <div class="veco-label">économie</div>
+      <div class="veco-val" style="color:${economie >= 0 ? 'var(--vert)' : 'var(--rouge)'}">${fmtK(economie)}/an</div>
+    </div>`;
+
+  grid.innerHTML =
+    vcard(eiR, coutEi, 'var(--gris3)', !eurlAvantage) +
+    ecoBox +
+    vcard(eurlR, coutEurl, eurlAvantage ? '#1a6ef5' : 'var(--rouge)', eurlAvantage);
 
   // TABLEAU DÉTAILLÉ
   const tbody = document.getElementById('detail-tbody');
@@ -723,8 +770,6 @@ function update() {
   }).join('');
 
   // Ligne de synthèse : net final dans les poches si tout sorti, par régime + écart
-  const eiR   = results.find(r => r.id === 'ei_ir');
-  const eurlR = results.find(r => r.id === 'eurl_is');
   const netEi   = eiR   ? netFinal(eiR.res, false)  : 0;
   const netEurl = eurlR ? netFinal(eurlR.res, true) : 0;
   const ecart   = netEurl - netEi;
