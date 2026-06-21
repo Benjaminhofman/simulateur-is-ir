@@ -389,6 +389,17 @@ function calcAbattement(revenu) {
   return revenu - abattement;
 }
 
+// Reconstitue le revenu brut social à partir d'un revenu net souhaité,
+// par approximations successives : brut = net + cotisations(brut).
+function reconstitueBrut(net) {
+  let brut = net * 1.45;
+  for (let i = 0; i < 10; i++) {
+    const cotis = calcCotisTNS(calcAbattement(brut));
+    brut = net + cotis;
+  }
+  return brut;
+}
+
 function calcCotisTNS(assiette) {
   const PASS = 46368;
 
@@ -466,7 +477,8 @@ function calcEI_IS(benefice, distrib, parts) {
   // La rémunération IS est calculée sur le revenu net souhaité, pas sur le brut reconstitué.
   const revenu_net = benefice - calcCotisTNS(calcAbattement(benefice));
   const remun = revenu_net * (distrib / 100);
-  const cotis_remun = calcCotisTNS(calcAbattement(remun));
+  const brut_remun = reconstitueBrut(remun);
+  const cotis_remun = calcCotisTNS(calcAbattement(brut_remun));
   
   // Résultat fiscal IS = CA brut reconstitué - rémunération - cotisations sur rémunération
   const brut = benefice;
@@ -497,7 +509,8 @@ function calcEURL_IS(benefice, distrib, parts) {
   // La rémunération IS est calculée sur le revenu net souhaité, pas sur le brut reconstitué.
   const revenu_net = benefice - calcCotisTNS(calcAbattement(benefice));
   const remun = revenu_net * (distrib / 100);
-  const cotis_remun = calcCotisTNS(calcAbattement(remun));
+  const brut_remun = reconstitueBrut(remun);
+  const cotis_remun = calcCotisTNS(calcAbattement(brut_remun));
 
   // Résultat fiscal IS = CA brut reconstitué - rémunération - cotisations sur rémunération
   const brut = benefice;
