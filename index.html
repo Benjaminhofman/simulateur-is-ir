@@ -369,10 +369,10 @@
         <label>Tranche marginale d'imposition (TMI)</label>
         <select id="sel-tmi">
           <option value="0">0 %</option>
-          <option value="0.11">11 %</option>
-          <option value="0.30" selected>30 %</option>
-          <option value="0.41">41 %</option>
-          <option value="0.45">45 %</option>
+          <option value="11">11 %</option>
+          <option value="30" selected>30 %</option>
+          <option value="41">41 %</option>
+          <option value="45">45 %</option>
         </select>
       </div>
     </div>
@@ -457,32 +457,6 @@ const IS_NORMAL      = 0.25;
 const PFU            = 0.30;
 const ABATT_DIV_IR   = 0.40;   // abattement 40% dividendes option IR (non utilisé ici, on applique PFU par défaut)
 
-// Barème IR 2026 (revenus 2025), par part
-const BAREME = [
-  { seuil: 11294,  taux: 0.00 },
-  { seuil: 29315,  taux: 0.11 },
-  { seuil: 83823,  taux: 0.30 },
-  { seuil: 180294, taux: 0.41 },
-  { seuil: Infinity, taux: 0.45 },
-];
-
-function calcIR(revenuImposable) {
-  // nombre de parts fiscales fixé à 1
-  const parts = 1;
-  const rpp = revenuImposable / parts;
-  let impot = 0;
-  let prev = 0;
-  for (let i = 0; i < BAREME.length; i++) {
-    const s = BAREME[i].seuil;
-    const t = BAREME[i].taux;
-    if (rpp <= prev) break;
-    const tranche = Math.min(rpp, s) - prev;
-    impot += tranche * t;
-    prev = s;
-  }
-  return Math.max(0, impot * parts);
-}
-
 function calcCotisTNS(revenu) {
   // Abattement forfaitaire de 26% sur le revenu, plafonné à 62478€ et planché à 845.86€
   const abattement_brut = revenu * 0.26;
@@ -527,15 +501,11 @@ function calcCotisTNS(revenu) {
 
 // ─── CALCUL PAR RÉGIME ───────────────────────────────────────────────────────
 
-function calcEI_IR(benefice, distrib, autres, parts) {
+function calcEI_IR(benefice, distrib, autres, parts, capital, tmi) {
   // Tout le bénéfice = revenu exploitant, cotisations sur bénéfice
   const cotis = calcCotisTNS(benefice);
-  const revenu_net = benefice - cotis;
-  const revenu_imposable = Math.max(0, revenu_net + autres);
-  const ir_total = calcIR(revenu_imposable);
-  // IR imputé à l'activité = proportion du revenu d'activité
-  const part_activite = revenu_net / revenu_imposable || 0;
-  const ir_activite = ir_total * part_activite;
+  // IR sur le revenu net d'activité au taux marginal (TMI) sélectionné
+  const ir_activite = (benefice - cotis) * (tmi / 100);
   const net_dispo = benefice - cotis - ir_activite;
   return {
     cotis: cotis,
@@ -547,9 +517,9 @@ function calcEI_IR(benefice, distrib, autres, parts) {
   };
 }
 
-function calcEURL_IR(benefice, distrib, autres, parts) {
+function calcEURL_IR(benefice, distrib, autres, parts, capital, tmi) {
   // Identique EI/IR : transparence, rémunération non déductible
-  return calcEI_IR(benefice, distrib, autres, parts);
+  return calcEI_IR(benefice, distrib, autres, parts, capital, tmi);
 }
 
 function calcEI_IS(benefice, distrib, autres, parts, capital, tmi) {
@@ -571,7 +541,7 @@ function calcEI_IS(benefice, distrib, autres, parts, capital, tmi) {
   
   // IR sur rémunération nette : taux marginal (TMI) saisi par l'utilisateur
   const remun_nette = Math.max(0, remun - cotis_remun);
-  const ir_activite = remun_nette * tmi;
+  const ir_activite = remun_nette * (tmi / 100);
   
   const net_dispo = remun - cotis_remun - ir_activite;
   const net_entreprise = benefice_apres_is;
@@ -606,7 +576,7 @@ function calcEURL_IS(benefice, distrib, autres, parts, capital, tmi) {
   
   // IR sur rémunération nette : taux marginal (TMI) saisi par l'utilisateur
   const remun_nette = Math.max(0, remun - cotis_remun);
-  const ir_activite = remun_nette * tmi;
+  const ir_activite = remun_nette * (tmi / 100);
   
   const net_dispo = remun - cotis_remun - ir_activite;
   const net_entreprise = benefice_apres_is;
@@ -651,7 +621,7 @@ function coutTotal(res) {
 // dividendes dépassant le seuil de 10%.
 function coutSiToutSorti(res, isIS, tmi) {
   if (!isIS) return coutTotal(res);
-  const irSortie    = res.net_entreprise * tmi;
+  const irSortie    = res.net_entreprise * (tmi / 100);
   const cotisSortie = calcCotisTNS(Math.max(0, res.net_entreprise - (res.seuil_div_tns || 0)));
   return coutTotal(res) + irSortie + cotisSortie;
 }
