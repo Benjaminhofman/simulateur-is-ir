@@ -530,8 +530,8 @@ function calcCotisTNS(revenu) {
   const sous_total = maladie + retraite_t1 + retraite_t2
                    + retcomp_t1 + retcomp_t2 + invalide + alloc + cfp;
 
-  // CSG-CRDS sur l'assiette majorée des cotisations
-  const csg = (assiette + sous_total) * 0.097;
+  // Réforme 2026 : CSG sur assiette seule, sans majoration cotisations
+  const csg = assiette * 0.097;
 
   return sous_total + csg;
 }
