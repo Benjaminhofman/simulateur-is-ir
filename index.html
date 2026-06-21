@@ -421,10 +421,15 @@
               <th>PFU dividendes</th>
               <th>Net disponible</th>
               <th>Net entreprise</th>
+              <th>Si tout sorti</th>
             </tr>
           </thead>
           <tbody id="detail-tbody"></tbody>
         </table>
+      </div>
+      <div style="margin-top:16px;padding:14px 16px;border:1px solid var(--gris2);background:var(--gris1);font-size:12px;line-height:1.6;color:var(--blanc2);">
+        Le capital restant en société appartient à la société, pas au dirigeant.
+        La colonne « Si tout sorti » simule le coût d'une distribution totale immédiate en dividendes.
       </div>
     </div>
 
@@ -544,6 +549,7 @@ function calcEI_IS(benefice, distrib, autres, parts, capital) {
     pfu: 0,
     net_dispo: net_dispo,
     net_entreprise: net_entreprise,
+    seuil_div_tns: seuil_div_tns,
   };
 }
 
@@ -580,6 +586,7 @@ function calcEURL_IS(benefice, distrib, autres, parts, capital) {
     pfu: 0,
     net_dispo: net_dispo,
     net_entreprise: net_entreprise,
+    seuil_div_tns: seuil_div_tns,
   };
 }
 
@@ -600,6 +607,17 @@ function fmtPct(n) {
 // Coût total des prélèvements et taux effectif global sur le bénéfice
 function coutTotal(res) {
   return res.cotis + res.is + res.ir + res.pfu;
+}
+
+// Coût total si l'on distribue aussi tout le capital resté en société (dividendes).
+// Pour l'IR : déjà tout sorti → identique au coût total.
+// Pour l'IS : on ajoute le PFU sur le net entreprise + les cotisations TNS
+// sur la part de dividendes dépassant le seuil de 10%.
+function coutSiToutSorti(res, isIS) {
+  if (!isIS) return coutTotal(res);
+  const pfuSortie   = res.net_entreprise * PFU;
+  const cotisSortie = calcCotisTNS(Math.max(0, res.net_entreprise - (res.seuil_div_tns || 0)));
+  return coutTotal(res) + pfuSortie + cotisSortie;
 }
 
 const REGIMES = [
@@ -786,9 +804,11 @@ function update() {
   // TABLEAU DÉTAILLÉ
   const tbody = document.getElementById('detail-tbody');
   tbody.innerHTML = results.map(r => {
-    const cout     = coutTotal(r.res);
-    const isWinner = cout === minCout;
-    const isWorst  = cout === maxCout;
+    const cout      = coutTotal(r.res);
+    const isISReg   = r.id.endsWith('_is');
+    const siTout    = coutSiToutSorti(r.res, isISReg);
+    const isWinner  = cout === minCout;
+    const isWorst   = cout === maxCout;
     return `
       <tr class="${isWinner ? 'best' : isWorst ? 'worst' : ''}">
         <td>
@@ -801,6 +821,7 @@ function update() {
         <td>${r.res.pfu > 0 ? fmt(r.res.pfu) : '—'}</td>
         <td class="net-val">${fmt(r.res.net_dispo)}</td>
         <td>${fmt(r.res.net_entreprise)}</td>
+        <td>${fmt(siTout)}</td>
       </tr>
     `;
   }).join('');
