@@ -669,38 +669,27 @@ function update() {
     res: r.fn(revenu_net, distrib, parts),
   }));
 
-  // Métrique principale : net final dans les poches si tout sorti (le plus haut gagne)
-  const netsFinaux = results.map(r => netFinal(r.res, r.id.endsWith('_is')));
-  const maxNet = Math.max(...netsFinaux);
-  const minNet = Math.min(...netsFinaux);
+  // Métrique principale des cases verdict : coût courant des prélèvements (le plus bas gagne)
+  const couts   = results.map(r => coutTotal(r.res));
+  const minCout = Math.min(...couts);
+  const maxCout = Math.max(...couts);
 
-  // VERDICT GRID
+  // VERDICT GRID — coût courant uniquement (les infos « si tout sorti » sont dans le tableau)
   const grid = document.getElementById('verdict-grid');
   grid.innerHTML = results.map(r => {
-    const isISReg = r.id.endsWith('_is');
     const cout    = coutTotal(r.res);
-    const surcout = coutSiToutSorti(r.res, isISReg);
-    const coutSorti = cout + surcout;
     const taux    = r.res.brut > 0 ? cout / r.res.brut * 100 : 0;
-    const tauxTotal = r.res.brut > 0 ? coutSorti / r.res.brut * 100 : 0;
-    const netFin  = netFinal(r.res, isISReg);
-    const isWinner = netFin === maxNet;
-    const isWorst  = netFin === minNet;
+    const isWinner = cout === minCout;
+    const isWorst  = cout === maxCout;
     return `
       <div class="verdict-cell ${isWinner ? 'winner' : ''}">
         <div class="verdict-cell-label">${r.label}</div>
         <div class="verdict-cell-montant" style="color:${isWinner ? 'var(--vert)' : isWorst ? 'var(--rouge)' : 'var(--blanc)'}">
-          ${fmt(netFin)}
+          ${fmt(cout)}
         </div>
-        <div class="verdict-cell-diff" style="color:var(--blanc2)">net final dans les poches (si tout sorti)</div>
-        <div class="verdict-cell-diff" style="color:var(--gris4);margin-top:6px">taux effectif ${fmtPct(taux)} · ${fmt(cout)} de prélèvements</div>
-        <div class="verdict-cell-diff" style="color:var(--gris4)">coût si tout sorti ${fmt(coutSorti)} (${fmtPct(tauxTotal)})</div>
+        <div class="verdict-cell-diff" style="color:var(--blanc2)">taux effectif ${fmtPct(taux)}</div>
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);line-height:1.6;margin-top:6px">
-          net perso&nbsp;&nbsp;${fmt(r.res.net_dispo)}<br>
-          net société&nbsp;&nbsp;${fmt(r.res.net_entreprise)}
-        </div>
-        <div style="font-size:9px;color:var(--gris4);line-height:1.4;margin-top:4px;font-style:italic">
-          net entreprise = capital société, non disponible personnellement
+          net perso&nbsp;&nbsp;${fmt(r.res.net_dispo)}${r.res.net_entreprise > 0 ? `<br>net société&nbsp;&nbsp;${fmt(r.res.net_entreprise)}` : ''}
         </div>
       </div>
     `;
@@ -714,8 +703,8 @@ function update() {
     const taux      = r.res.brut > 0 ? cout / r.res.brut * 100 : 0;
     const siTout    = coutSiToutSorti(r.res, isISReg);
     const netFin    = netFinal(r.res, isISReg);
-    const isWinner  = netFin === maxNet;
-    const isWorst   = netFin === minNet;
+    const isWinner  = cout === minCout;
+    const isWorst   = cout === maxCout;
     return `
       <tr class="${isWinner ? 'best' : isWorst ? 'worst' : ''}">
         <td>
