@@ -516,12 +516,12 @@ function calcEI_IS(benefice, distrib, autres, parts, capital) {
   const remun = benefice * (distrib / 100);
   const cotis_remun = calcCotisTNS(remun);
   
-  // Résultat fiscal IS = bénéfice - rémunération - cotisations
-  const resultat_is = Math.max(0, benefice - remun - cotis_remun);
+  // Résultat fiscal IS = bénéfice - rémunération (cotisations incluses dans remun côté entreprise)
+  const resultat_is = Math.max(0, benefice - remun);
   const is_du = Math.min(resultat_is, IS_SEUIL) * IS_REDUIT +
                 Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
   const benefice_apres_is = resultat_is - is_du;
-  
+
   // Dividendes depuis le bénéfice après IS (reste distribué si distrib = 100%)
   // On suppose que ce qui reste après IS est laissé en entreprise (sauf si demande de distribution)
   // Dividendes = 0 ici (on distribue via rémunération seulement pour EI/IS)
@@ -550,12 +550,13 @@ function calcEI_IS(benefice, distrib, autres, parts, capital) {
 function calcEURL_IS(benefice, distrib, autres, parts, capital) {
   const remun = benefice * (distrib / 100);
   const cotis_remun = calcCotisTNS(remun);
-  
-  const resultat_is = Math.max(0, benefice - remun - cotis_remun);
+
+  // Résultat fiscal IS = bénéfice - rémunération (cotisations incluses dans remun côté entreprise)
+  const resultat_is = Math.max(0, benefice - remun);
   const is_du = Math.min(resultat_is, IS_SEUIL) * IS_REDUIT +
                 Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
   const benefice_apres_is = resultat_is - is_du;
-  
+
   // Seuil 10% du capital social (EURL/IS)
   const seuil_div_tns = capital * 0.10;
   
