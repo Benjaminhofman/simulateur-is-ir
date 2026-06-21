@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulateur IS vs IR — EI & EURL 2026</title>
+<meta name="description" content="Comparez les régimes fiscaux EI/IR, EI/IS, EURL/IR et EURL/IS. Calculez votre net disponible et identifiez votre seuil de bascule IS/IR en 2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --noir:    #ffffff;
+    --gris1:   #f7f7f9;
+    --gris2:   #e8e8ee;
+    --gris3:   #d0d0dc;
+    --gris4:   #8888a0;
+    --blanc:   #0e0e10;
+    --blanc2:  #3a3a50;
+    --jaune:   #1a6ef5;
+    --rouge:   #e84060;
+    --vert:    #40c880;
+    --bleu:    #4080e8;
+    --violet:  #a060e8;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #ffffff;
+    color: var(--blanc);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 1px solid var(--gris2);
+    padding: 28px 40px;
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+  }
+  .header-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    color: var(--blanc);
+    letter-spacing: -0.5px;
+  }
+  .header-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--jaune);
+    letter-spacing: 0.08em;
+  }
+  .badge-2026 {
+    margin-left: auto;
+    background: #1a6ef5;
+    color: #ffffff;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    letter-spacing: 0.12em;
+  }
+
+  /* LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: calc(100vh - 77px);
+  }
+
+  /* PANNEAU GAUCHE */
+  .panel-left {
+    border-right: 1px solid var(--gris2);
+    padding: 36px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--gris4);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field label {
+    font-size: 13px;
+    color: var(--blanc2);
+    font-weight: 500;
+  }
+
+  .field-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--jaune);
+    min-height: 24px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--gris3);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--jaune);
+    border-radius: 50%;
+    transition: transform 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+
+  select {
+    background: var(--gris1);
+    border: 1px solid var(--gris3);
+    color: var(--blanc);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    width: 100%;
+    cursor: pointer;
+    outline: none;
+  }
+  select:focus { border-color: var(--jaune); }
+
+  .capital-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .capital-row input[type=number] {
+    background: var(--gris1);
+    border: 1px solid var(--gris3);
+    color: var(--blanc);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    padding: 8px 12px;
+    width: 100%;
+    outline: none;
+  }
+  .capital-row input[type=number]:focus { border-color: var(--jaune); }
+  .euro-sign { color: var(--gris4); font-family: 'DM Mono', monospace; }
+
+  /* SEUIL ENCADRE */
+  .seuil-box {
+    border: 1px solid #1a6ef5;
+    background: #eef3ff;
+    padding: 20px;
+    margin-top: auto;
+  }
+  .seuil-titre {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--gris4);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .seuil-texte {
+    font-size: 13px;
+    color: var(--blanc2);
+    line-height: 1.7;
+  }
+  .seuil-chiffre {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: #1a6ef5;
+  }
+
+  /* PANNEAU DROIT */
+  .panel-right {
+    padding: 36px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+  }
+
+  /* TABLEAU COMPARATIF */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead tr {
+    border-bottom: 1px solid var(--gris3);
+  }
+  th {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--gris4);
+    text-transform: uppercase;
+    padding: 0 16px 12px 0;
+    text-align: right;
+    white-space: nowrap;
+  }
+  th:first-child { text-align: left; }
+
+  td {
+    padding: 12px 16px 12px 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    text-align: right;
+    border-bottom: 1px solid var(--gris2);
+    color: var(--blanc2);
+  }
+  td:first-child {
+    text-align: left;
+    color: var(--blanc);
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+  }
+  tr.best td { color: var(--blanc); }
+  tr.best td.net-val {
+    color: var(--vert);
+    font-weight: 500;
+  }
+  tr.worst td.net-val { color: var(--rouge); }
+
+  .regime-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* GRAPHIQUE */
+  .chart-container {
+    position: relative;
+    height: 320px;
+    background: var(--gris1);
+    border: 1px solid var(--gris2);
+    padding: 24px;
+  }
+
+  /* LÉGENDES GRAPHIQUE */
+  .legend-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--blanc2);
+  }
+  .legend-line {
+    width: 24px;
+    height: 2px;
+  }
+
+  /* HIGHLIGHT GAGNANT */
+  .verdict {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--gris2);
+    border: 1px solid var(--gris2);
+  }
+  .verdict-cell {
+    background: var(--gris1);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .verdict-cell.winner { background: #eef3ff; border: 1px solid #1a6ef5; }
+  .verdict-cell-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--gris4);
+    text-transform: uppercase;
+  }
+  .verdict-cell-regime {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .verdict-cell-montant {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+  }
+  .verdict-cell-diff {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--vert);
+  }
+
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .panel-left { border-right: none; border-bottom: 1px solid var(--gris2); }
+    .verdict { grid-template-columns: repeat(2, 1fr); }
+    .header { padding: 20px; }
+    .panel-right { padding: 24px 20px; }
+    .panel-left { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-title">IS vs IR</div>
+  <div class="header-sub">EI · EURL · Régime fiscal</div>
+  <span class="badge-2026">RÉFORME 2026</span>
+</header>
+
+<div class="main">
+
+  <!-- PANNEAU PARAMÈTRES -->
+  <aside class="panel-left">
+
+    <div>
+      <div class="section-label">Votre activité</div>
+
+      <div class="field">
+        <label>Bénéfice brut annuel</label>
+        <div class="field-value" id="val-benefice">60 000 €</div>
+        <input type="range" id="rng-benefice" min="15000" max="300000" step="1000" value="60000">
+        <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);margin-top:4px;">
+          <span>15k</span><span>300k</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Autres revenus du foyer</label>
+        <div class="field-value" id="val-autres">0 €</div>
+        <input type="range" id="rng-autres" min="0" max="100000" step="1000" value="0">
+        <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);margin-top:4px;">
+          <span>0</span><span>100k</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Part souhaitée en revenu (distribution)</label>
+        <div class="field-value" id="val-distrib">70%</div>
+        <input type="range" id="rng-distrib" min="10" max="100" step="5" value="70">
+        <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);margin-top:4px;">
+          <span>10%</span><span>100%</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Nombre de parts fiscales</label>
+        <select id="sel-parts">
+          <option value="1">1 part (célibataire)</option>
+          <option value="1.5">1,5 parts</option>
+          <option value="2" selected>2 parts (couple sans enfant)</option>
+          <option value="2.5">2,5 parts</option>
+          <option value="3">3 parts</option>
+          <option value="4">4 parts</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">EURL — capital social</div>
+      <div class="field">
+        <label>Capital social (seuil dividendes TNS)</label>
+        <div class="capital-row">
+          <input type="number" id="inp-capital" value="1000" min="1" step="100">
+          <span class="euro-sign">€</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="seuil-box">
+      <div class="seuil-titre">Seuil de bascule IS / IR</div>
+      <div class="seuil-texte" id="seuil-texte">Calculez pour voir le seuil.</div>
+    </div>
+
+  </aside>
+
+  <!-- PANNEAU RÉSULTATS -->
+  <main class="panel-right">
+
+    <!-- VERDICT 4 CASES -->
+    <div>
+      <div class="section-label">Net disponible annuel après tout prélèvement</div>
+      <div class="verdict" id="verdict-grid">
+        <!-- généré par JS -->
+      </div>
+    </div>
+
+    <!-- TABLEAU DÉTAILLÉ -->
+    <div>
+      <div class="section-label">Décomposition des prélèvements</div>
+      <div class="table-wrap">
+        <table id="detail-table">
+          <thead>
+            <tr>
+              <th>Régime</th>
+              <th>Cotisations TNS</th>
+              <th>IS</th>
+              <th>IR</th>
+              <th>PFU dividendes</th>
+              <th>Net disponible</th>
+              <th>Net entreprise</th>
+            </tr>
+          </thead>
+          <tbody id="detail-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- GRAPHIQUE -->
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="section-label" style="margin-bottom:0;">Courbes selon le bénéfice brut</div>
+        <div class="legend-row" id="legend-row"></div>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-main"></canvas>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ─── CONSTANTES FISCALES 2026 ───────────────────────────────────────────────
+
+const ABATTEMENT_TNS = 0.26;
+const TAUX_TNS_MOY   = 0.40;   // taux moyen après abattement (~33-45%, on prend 40% médian)
+const IS_SEUIL       = 42500;
+const IS_REDUIT      = 0.15;
+const IS_NORMAL      = 0.25;
+const PFU            = 0.30;
+const ABATT_DIV_IR   = 0.40;   // abattement 40% dividendes option IR (non utilisé ici, on applique PFU par défaut)
+
+// Barème IR 2026 (revenus 2025), par part
+const BAREME = [
+  { seuil: 11294,  taux: 0.00 },
+  { seuil: 29315,  taux: 0.11 },
+  { seuil: 83823,  taux: 0.30 },
+  { seuil: 180294, taux: 0.41 },
+  { seuil: Infinity, taux: 0.45 },
+];
+
+function calcIR(revenuImposable, parts) {
+  // revenu par part
+  const rpp = revenuImposable / parts;
+  let impot = 0;
+  let prev = 0;
+  for (let i = 0; i < BAREME.length; i++) {
+    const s = BAREME[i].seuil;
+    const t = BAREME[i].taux;
+    if (rpp <= prev) break;
+    const tranche = Math.min(rpp, s) - prev;
+    impot += tranche * t;
+    prev = s;
+  }
+  return Math.max(0, impot * parts);
+}
+
+function calcCotisTNS(base) {
+  // base = revenu sur lequel s'applique l'abattement 26%
+  const assiette = base * (1 - ABATTEMENT_TNS);
+  return assiette * TAUX_TNS_MOY;
+}
+
+// ─── CALCUL PAR RÉGIME ───────────────────────────────────────────────────────
+
+function calcEI_IR(benefice, distrib, autres, parts) {
+  // Tout le bénéfice = revenu exploitant, cotisations sur bénéfice
+  const cotis = calcCotisTNS(benefice);
+  const revenu_net = benefice - cotis;
+  const revenu_imposable = Math.max(0, revenu_net + autres);
+  const ir_total = calcIR(revenu_imposable, parts);
+  // IR imputé à l'activité = proportion du revenu d'activité
+  const part_activite = revenu_net / revenu_imposable || 0;
+  const ir_activite = ir_total * part_activite;
+  const net_dispo = benefice - cotis - ir_activite;
+  return {
+    cotis: cotis,
+    is: 0,
+    ir: ir_activite,
+    pfu: 0,
+    net_dispo: net_dispo,
+    net_entreprise: 0,
+  };
+}
+
+function calcEURL_IR(benefice, distrib, autres, parts) {
+  // Identique EI/IR : transparence, rémunération non déductible
+  return calcEI_IR(benefice, distrib, autres, parts);
+}
+
+function calcEI_IS(benefice, distrib, autres, parts, capital) {
+  // Split : rémunération = bénéfice × distrib
+  const remun = benefice * (distrib / 100);
+  const cotis_remun = calcCotisTNS(remun);
+  
+  // Résultat fiscal IS = bénéfice - rémunération - cotisations
+  const resultat_is = Math.max(0, benefice - remun - cotis_remun);
+  const is_du = Math.min(resultat_is, IS_SEUIL) * IS_REDUIT +
+                Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
+  const benefice_apres_is = resultat_is - is_du;
+  
+  // Dividendes depuis le bénéfice après IS (reste distribué si distrib = 100%)
+  // On suppose que ce qui reste après IS est laissé en entreprise (sauf si demande de distribution)
+  // Dividendes = 0 ici (on distribue via rémunération seulement pour EI/IS)
+  // Seuil 10% du bénéfice net (EI/IS)
+  const seuil_div_tns = resultat_is * 0.10;
+  
+  // IR sur rémunération
+  const revenu_ir = Math.max(0, remun - cotis_remun + autres);
+  const ir_total = calcIR(revenu_ir, parts);
+  const part_activite = (remun - cotis_remun) / revenu_ir || 0;
+  const ir_activite = ir_total * part_activite;
+  
+  const net_dispo = remun - cotis_remun - ir_activite;
+  const net_entreprise = benefice_apres_is;
+  
+  return {
+    cotis: cotis_remun,
+    is: is_du,
+    ir: ir_activite,
+    pfu: 0,
+    net_dispo: net_dispo,
+    net_entreprise: net_entreprise,
+  };
+}
+
+function calcEURL_IS(benefice, distrib, autres, parts, capital) {
+  const remun = benefice * (distrib / 100);
+  const cotis_remun = calcCotisTNS(remun);
+  
+  const resultat_is = Math.max(0, benefice - remun - cotis_remun);
+  const is_du = Math.min(resultat_is, IS_SEUIL) * IS_REDUIT +
+                Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
+  const benefice_apres_is = resultat_is - is_du;
+  
+  // Seuil 10% du capital social (EURL/IS)
+  const seuil_div_tns = capital * 0.10;
+  
+  // On suppose qu'une partie du bénéfice après IS peut être versée en dividendes
+  // Ici on laisse le bénéfice après IS en entreprise (net_entreprise)
+  // et on ne verse pas de dividendes supplémentaires (le curseur distrib pilote la remun)
+  
+  // IR sur rémunération nette
+  const revenu_ir = Math.max(0, remun - cotis_remun + autres);
+  const ir_total = calcIR(revenu_ir, parts);
+  const part_activite = (remun - cotis_remun) / revenu_ir || 0;
+  const ir_activite = ir_total * part_activite;
+  
+  const net_dispo = remun - cotis_remun - ir_activite;
+  const net_entreprise = benefice_apres_is;
+  
+  return {
+    cotis: cotis_remun,
+    is: is_du,
+    ir: ir_activite,
+    pfu: 0,
+    net_dispo: net_dispo,
+    net_entreprise: net_entreprise,
+  };
+}
+
+// ─── UTILITAIRES ─────────────────────────────────────────────────────────────
+
+function fmt(n) {
+  return Math.round(n).toLocaleString('fr-FR') + ' €';
+}
+
+function fmtK(n) {
+  return Math.round(n / 1000) + 'k€';
+}
+
+const REGIMES = [
+  { id: 'ei_ir',   label: 'EI / IR',   color: '#e84060', fn: calcEI_IR   },
+  { id: 'eurl_ir', label: 'EURL / IR', color: '#4080e8', fn: calcEURL_IR },
+  { id: 'ei_is',   label: 'EI / IS',   color: '#a060e8', fn: calcEI_IS   },
+  { id: 'eurl_is', label: 'EURL / IS', color: '#40c880', fn: calcEURL_IS },
+];
+
+// ─── CHART ───────────────────────────────────────────────────────────────────
+
+let chart = null;
+
+function buildChart(benefice_actuel, distrib, autres, parts, capital) {
+  const ctx = document.getElementById('chart-main').getContext('2d');
+  
+  const steps = [];
+  for (let b = 15000; b <= 300000; b += 5000) steps.push(b);
+  
+  const datasets = REGIMES.map(r => {
+    const data = steps.map(b => {
+      const res = r.fn(b, distrib, autres, parts, capital);
+      return Math.round(res.net_dispo);
+    });
+    return {
+      label: r.label,
+      data: data,
+      borderColor: r.color,
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.3,
+    };
+  });
+
+  // Ligne verticale bénéfice actuel
+  const vertPlugin = {
+    id: 'vertLine',
+    afterDraw(chart) {
+      const xScale = chart.scales.x;
+      const yScale = chart.scales.y;
+      const idx = steps.findIndex(s => s >= benefice_actuel);
+      if (idx < 0) return;
+      const x = xScale.getPixelForValue(idx);
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.strokeStyle = '#1a6ef5';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(x, yScale.top);
+      ctx.lineTo(x, yScale.bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  const labels = steps.map((s, i) => i % 4 === 0 ? fmtK(s) : '');
+
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 200 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: '#ffffff',
+          borderColor: '#d0d0dc',
+          borderWidth: 1,
+          titleColor: '#3a3a50',
+          bodyColor: '#0e0e10',
+          callbacks: {
+            title: (items) => {
+              const idx = items[0].dataIndex;
+              return 'Bénéfice : ' + fmtK(steps[idx]);
+            },
+            label: (item) => {
+              return item.dataset.label + ' : ' + item.formattedValue.replace(',', ' ') + ' €';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#e8e8ee' },
+          ticks: {
+            color: '#8888a0',
+            font: { family: 'DM Mono', size: 10 },
+            maxRotation: 0,
+          }
+        },
+        y: {
+          grid: { color: '#e8e8ee' },
+          ticks: {
+            color: '#8888a0',
+            font: { family: 'DM Mono', size: 10 },
+            callback: v => fmtK(v),
+          }
+        }
+      }
+    },
+    plugins: [vertPlugin],
+  });
+}
+
+function buildLegend() {
+  const row = document.getElementById('legend-row');
+  row.innerHTML = REGIMES.map(r => `
+    <div class="legend-item">
+      <div class="legend-line" style="background:${r.color}"></div>
+      ${r.label}
+    </div>
+  `).join('');
+}
+
+// ─── SEUIL DE BASCULE ────────────────────────────────────────────────────────
+
+function findSeuilBascule(distrib, autres, parts, capital) {
+  // Cherche où EURL/IS dépasse EURL/IR
+  let seuilIS = null;
+  for (let b = 15000; b <= 300000; b += 1000) {
+    const ir = calcEURL_IR(b, distrib, autres, parts, capital).net_dispo;
+    const is = calcEURL_IS(b, distrib, autres, parts, capital).net_dispo;
+    if (is > ir && seuilIS === null) {
+      seuilIS = b;
+      break;
+    }
+  }
+  return seuilIS;
+}
+
+// ─── MISE À JOUR UI ──────────────────────────────────────────────────────────
+
+function update() {
+  const benefice = +document.getElementById('rng-benefice').value;
+  const autres   = +document.getElementById('rng-autres').value;
+  const distrib  = +document.getElementById('rng-distrib').value;
+  const parts    = +document.getElementById('sel-parts').value;
+  const capital  = +document.getElementById('inp-capital').value || 1000;
+
+  document.getElementById('val-benefice').textContent = fmt(benefice);
+  document.getElementById('val-autres').textContent   = fmt(autres);
+  document.getElementById('val-distrib').textContent  = distrib + '%';
+
+  // Calcul des 4 régimes
+  const results = REGIMES.map(r => ({
+    ...r,
+    res: r.fn(benefice, distrib, autres, parts, capital),
+  }));
+
+  const nets = results.map(r => r.res.net_dispo);
+  const maxNet = Math.max(...nets);
+  const minNet = Math.min(...nets);
+
+  // VERDICT GRID
+  const grid = document.getElementById('verdict-grid');
+  grid.innerHTML = results.map(r => {
+    const isWinner = r.res.net_dispo === maxNet;
+    const isWorst  = r.res.net_dispo === minNet;
+    const diff = r.res.net_dispo - minNet;
+    return `
+      <div class="verdict-cell ${isWinner ? 'winner' : ''}">
+        <div class="verdict-cell-label">${r.label}</div>
+        <div class="verdict-cell-montant" style="color:${isWinner ? 'var(--vert)' : isWorst ? 'var(--rouge)' : 'var(--blanc2)'}">
+          ${fmt(r.res.net_dispo)}
+        </div>
+        ${isWinner ? `<div class="verdict-cell-diff">meilleur régime</div>` :
+          diff > 0 ? `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gris4)">−${fmt(maxNet - r.res.net_dispo)}/an</div>` :
+          `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--rouge)">moins favorable</div>`}
+      </div>
+    `;
+  }).join('');
+
+  // TABLEAU DÉTAILLÉ
+  const tbody = document.getElementById('detail-tbody');
+  tbody.innerHTML = results.map(r => {
+    const isWinner = r.res.net_dispo === maxNet;
+    const isWorst  = r.res.net_dispo === minNet;
+    return `
+      <tr class="${isWinner ? 'best' : isWorst ? 'worst' : ''}">
+        <td>
+          <span class="regime-dot" style="background:${r.color}"></span>
+          ${r.label}
+        </td>
+        <td>${fmt(r.res.cotis)}</td>
+        <td>${r.res.is > 0 ? fmt(r.res.is) : '—'}</td>
+        <td>${fmt(r.res.ir)}</td>
+        <td>${r.res.pfu > 0 ? fmt(r.res.pfu) : '—'}</td>
+        <td class="net-val">${fmt(r.res.net_dispo)}</td>
+        <td>${fmt(r.res.net_entreprise)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // SEUIL
+  const seuil = findSeuilBascule(distrib, autres, parts, capital);
+  const seuilEl = document.getElementById('seuil-texte');
+  if (seuil === null) {
+    seuilEl.innerHTML = `En dessous de 300k€ de bénéfice, l'IS n'est pas avantageux avec ces paramètres.`;
+  } else if (benefice < seuil) {
+    seuilEl.innerHTML = `
+      Votre bénéfice actuel (${fmtK(benefice)}) est <em style="color:var(--blanc2)">en dessous</em> du seuil.<br>
+      L'IS devient favorable à partir de <span class="seuil-chiffre">${fmtK(seuil)}</span> de bénéfice brut.
+    `;
+  } else {
+    seuilEl.innerHTML = `
+      Vous êtes <em style="color:var(--vert)">au-dessus</em> du seuil de bascule.<br>
+      L'IS est plus favorable depuis <span class="seuil-chiffre">${fmtK(seuil)}</span>.
+    `;
+  }
+
+  // GRAPHIQUE
+  buildChart(benefice, distrib, autres, parts, capital);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+['rng-benefice','rng-autres','rng-distrib'].forEach(id =>
+  document.getElementById(id).addEventListener('input', update)
+);
+document.getElementById('sel-parts').addEventListener('change', update);
+document.getElementById('inp-capital').addEventListener('input', update);
+
+buildLegend();
+update();
+</script>
+</body>
+</html>
