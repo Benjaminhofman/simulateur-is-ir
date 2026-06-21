@@ -497,6 +497,20 @@ function calcIR(revenuImposable, parts) {
 function calcCotisTNS(assiette) {
   // assiette = revenu × 0.74 déjà calculé en amont
   const PASS = 46368;
+
+  // Maladie progressive
+  let maladie;
+  if (assiette < PASS * 0.40) maladie = assiette * 0.005;
+  else if (assiette < PASS * 1.10) maladie = assiette * 0.035;
+  else maladie = assiette * 0.065;
+
+  // Retraite base deux tranches
+  const retraite_t1 = Math.min(assiette, PASS) * 0.1775;
+  const retraite_t2 = Math.max(0, assiette - PASS) * 0.006;
+
+  // Retraite complémentaire deux tranches
+  const retcomp_t1 = Math.min(assiette, PASS) * 0.07;
+  const retcomp_t2 = Math.min(Math.max(0, assiette - PASS), PASS * 3) * 0.08;
   // postes à compléter
 }
 
