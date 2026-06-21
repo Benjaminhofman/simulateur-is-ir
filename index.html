@@ -668,7 +668,10 @@ function update() {
   const grid = document.getElementById('verdict-grid');
   grid.innerHTML = results.map(r => {
     const cout    = coutTotal(r.res);
+    const surcout = coutSiToutSorti(r.res, r.id.endsWith('_is'));
+    const coutSorti = cout + surcout;
     const taux    = r.res.brut > 0 ? cout / r.res.brut * 100 : 0;
+    const tauxTotal = r.res.brut > 0 ? coutSorti / r.res.brut * 100 : 0;
     const isWinner = cout === minCout;
     const isWorst  = cout === maxCout;
     return `
@@ -678,7 +681,11 @@ function update() {
           ${fmtPct(taux)}
         </div>
         <div class="verdict-cell-diff" style="color:var(--blanc2)">${fmt(cout)} de prélèvements</div>
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);line-height:1.6;margin-top:2px">
+        <div class="verdict-cell-diff" style="color:var(--blanc);margin-top:6px;font-weight:600">
+          si tout sorti&nbsp;: ${fmtPct(tauxTotal)}
+        </div>
+        <div class="verdict-cell-diff" style="color:var(--gris4)">${fmt(coutSorti)} coût total</div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);line-height:1.6;margin-top:6px">
           net perso&nbsp;&nbsp;${fmt(r.res.net_dispo)}<br>
           net société&nbsp;&nbsp;${fmt(r.res.net_entreprise)}
         </div>
@@ -714,6 +721,19 @@ function update() {
       </tr>
     `;
   }).join('');
+
+  // Ligne de synthèse : coût total si tout sorti (cout_total + surcoût) et taux total
+  const synthese = results.map(r => {
+    const coutSorti = coutTotal(r.res) + coutSiToutSorti(r.res, r.id.endsWith('_is'));
+    const tauxTotal = r.res.brut > 0 ? coutSorti / r.res.brut * 100 : 0;
+    return `${r.label} : <strong style="color:var(--blanc)">${fmt(coutSorti)}</strong> (${fmtPct(tauxTotal)})`;
+  }).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+  tbody.innerHTML += `
+    <tr style="border-top:2px solid var(--gris3);background:var(--gris1);">
+      <td style="font-weight:600;color:var(--blanc);font-family:'Inter',sans-serif;font-size:12px;">Coût total si tout sorti</td>
+      <td colspan="7" style="text-align:left;color:var(--blanc2);">${synthese}</td>
+    </tr>
+  `;
 
   // GRAPHIQUE
   buildChart(revenu_net, distrib, parts);
