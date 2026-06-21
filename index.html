@@ -412,7 +412,7 @@
 
     <!-- VERDICT 4 CASES -->
     <div>
-      <div class="section-label">Net disponible annuel après tout prélèvement</div>
+      <div class="section-label">Taux effectif de prélèvements obligatoires sur le bénéfice</div>
       <div class="verdict" id="verdict-grid">
         <!-- généré par JS -->
       </div>
@@ -429,8 +429,8 @@
               <th>Cotisations TNS</th>
               <th>IS</th>
               <th>IR</th>
-              <th>PFU dividendes</th>
-              <th>Net disponible</th>
+              <th>Coût total</th>
+              <th>Taux effectif</th>
               <th>Net entreprise</th>
               <th>Si tout sorti</th>
             </tr>
@@ -611,9 +611,12 @@ function fmtPct(n) {
   return n.toFixed(1).replace('.', ',') + '%';
 }
 
-// Coût total des prélèvements et taux effectif global sur le bénéfice
+// Coût total des prélèvements obligatoires sur le bénéfice brut (métrique unique).
+// EI/IR & EURL/IR : cotisations TNS + IR.
+// EI/IS & EURL/IS : cotisations TNS + IS + IR.
+// Le PFU n'intervient pas ici : il ne joue qu'à la sortie future des dividendes.
 function coutTotal(res) {
-  return res.cotis + res.is + res.ir + res.pfu;
+  return res.cotis + res.is + res.ir;
 }
 
 // Coût total si l'on distribue aussi tout le capital resté en société (dividendes).
@@ -806,6 +809,9 @@ function update() {
           net perso&nbsp;&nbsp;${fmt(r.res.net_dispo)}<br>
           net société&nbsp;&nbsp;${fmt(r.res.net_entreprise)}
         </div>
+        <div style="font-size:9px;color:var(--gris4);line-height:1.4;margin-top:4px;font-style:italic">
+          net entreprise = capital société, non disponible personnellement
+        </div>
       </div>
     `;
   }).join('');
@@ -814,6 +820,7 @@ function update() {
   const tbody = document.getElementById('detail-tbody');
   tbody.innerHTML = results.map(r => {
     const cout      = coutTotal(r.res);
+    const taux      = benefice > 0 ? cout / benefice * 100 : 0;
     const isISReg   = r.id.endsWith('_is');
     const siTout    = coutSiToutSorti(r.res, isISReg, tmi);
     const isWinner  = cout === minCout;
@@ -827,8 +834,8 @@ function update() {
         <td>${fmt(r.res.cotis)}</td>
         <td>${r.res.is > 0 ? fmt(r.res.is) : '—'}</td>
         <td>${fmt(r.res.ir)}</td>
-        <td>${r.res.pfu > 0 ? fmt(r.res.pfu) : '—'}</td>
-        <td class="net-val">${fmt(r.res.net_dispo)}</td>
+        <td class="net-val">${fmt(cout)}</td>
+        <td class="net-val">${fmtPct(taux)}</td>
         <td>${fmt(r.res.net_entreprise)}</td>
         <td>${fmt(siTout)}</td>
       </tr>
