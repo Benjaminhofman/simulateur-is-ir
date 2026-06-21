@@ -380,7 +380,7 @@
               <th>Coût total</th>
               <th>Taux effectif</th>
               <th>Net entreprise</th>
-              <th>Si tout sorti</th>
+              <th>Net si tout sorti</th>
             </tr>
           </thead>
           <tbody id="detail-tbody"></tbody>
@@ -388,7 +388,8 @@
       </div>
       <div style="margin-top:16px;padding:14px 16px;border:1px solid var(--gris2);background:var(--gris1);font-size:12px;line-height:1.6;color:var(--blanc2);">
         Le capital restant en société appartient à la société, pas au dirigeant.
-        La colonne « Si tout sorti » simule le coût d'une distribution totale immédiate en dividendes.
+        La colonne « Net si tout sorti » montre ce que le dirigeant perçoit réellement s'il sort
+        aussi tout ce capital en rémunération complémentaire (cotisations TNS et IR déduits).
       </div>
     </div>
 
@@ -587,16 +588,16 @@ function coutTotal(res) {
   return res.cotis + res.is + res.ir;
 }
 
-// Coût total si l'on sort aussi tout le capital resté en société.
-// Pour l'IR : déjà tout sorti → identique au coût total.
-// Pour l'IS : sortie en rémunération complémentaire (et non en dividendes) :
-// cotisations TNS + IR au barème sur cette rémunération supplémentaire.
+// Net total perçu par le dirigeant s'il sort aussi tout le capital resté en société.
+// Pour l'IR : déjà tout sorti → net perso (net_entreprise = 0).
+// Pour l'IS : net perso + le net de la rémunération complémentaire sortie
+// (net_entreprise diminué des cotisations TNS et de l'IR au barème).
 function coutSiToutSorti(res, isIS) {
-  if (!isIS) return coutTotal(res);
+  if (!isIS) return res.net_dispo;
   const remun_comp = res.net_entreprise;
   const cotis_comp = calcCotisTNS(calcAbattement(remun_comp));
   const ir_comp    = calcIR(Math.max(0, remun_comp - cotis_comp));
-  return coutTotal(res) + cotis_comp + ir_comp;
+  return res.net_dispo + (remun_comp - cotis_comp - ir_comp);
 }
 
 const REGIMES = [
