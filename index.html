@@ -516,10 +516,14 @@ function coutTotal(res) {
 function coutSiToutSorti(res, isIS) {
   // Surcoût nul si pas IS, ou si rien n'est resté en société (net_entreprise <= 0)
   if (!isIS || res.net_entreprise <= 0) return 0;
-  const remun_comp = res.net_entreprise;
-  const cotis_comp = calcCotisTNS(calcAbattement(remun_comp));
-  const ir_comp    = calcIR(Math.max(0, remun_comp - cotis_comp));
-  return cotis_comp + ir_comp;
+  // net_entreprise est un montant net : on reconstitue son brut pour les cotisations
+  const net_entreprise = res.net_entreprise;
+  const brut_comp = reconstitueBrut(net_entreprise);
+  const cotis_comp = calcCotisTNS(calcAbattement(brut_comp));
+  const ir_comp    = calcIR(net_entreprise);
+  const surcout    = cotis_comp + ir_comp;
+  console.log(net_entreprise, brut_comp, cotis_comp, ir_comp, surcout);
+  return surcout;
 }
 
 const REGIMES = [
