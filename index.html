@@ -140,23 +140,6 @@
   }
   select:focus { border-color: var(--jaune); }
 
-  .capital-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .capital-row input[type=number] {
-    background: var(--gris1);
-    border: 1px solid var(--gris3);
-    color: var(--blanc);
-    font-family: 'DM Mono', monospace;
-    font-size: 14px;
-    padding: 8px 12px;
-    width: 100%;
-    outline: none;
-  }
-  .capital-row input[type=number]:focus { border-color: var(--jaune); }
-  .euro-sign { color: var(--gris4); font-family: 'DM Mono', monospace; }
 
   /* PANNEAU DROIT */
   .panel-right {
@@ -342,17 +325,6 @@
 
     </div>
 
-    <div>
-      <div class="section-label">EURL — capital social</div>
-      <div class="field">
-        <label>Capital social (seuil dividendes TNS)</label>
-        <div class="capital-row">
-          <input type="number" id="inp-capital" value="1000" min="1" step="100">
-          <span class="euro-sign">€</span>
-        </div>
-      </div>
-    </div>
-
   </aside>
 
   <!-- PANNEAU RÉSULTATS -->
@@ -477,7 +449,7 @@ function calcIR(revenu) {
 
 // ─── CALCUL PAR RÉGIME ───────────────────────────────────────────────────────
 
-function calcEI_IR(benefice, distrib, autres, parts, capital) {
+function calcEI_IR(benefice, distrib, autres, parts) {
   // Tout le bénéfice = revenu exploitant, cotisations sur bénéfice
   const cotis = calcCotisTNS(calcAbattement(benefice));
   // IR au barème progressif sur le revenu net d'activité
@@ -493,12 +465,12 @@ function calcEI_IR(benefice, distrib, autres, parts, capital) {
   };
 }
 
-function calcEURL_IR(benefice, distrib, autres, parts, capital) {
+function calcEURL_IR(benefice, distrib, autres, parts) {
   // Identique EI/IR : transparence, rémunération non déductible
-  return calcEI_IR(benefice, distrib, autres, parts, capital);
+  return calcEI_IR(benefice, distrib, autres, parts);
 }
 
-function calcEI_IS(benefice, distrib, autres, parts, capital) {
+function calcEI_IS(benefice, distrib, autres, parts) {
   // Split : rémunération = bénéfice × distrib
   const remun = benefice * (distrib / 100);
   const cotis_remun = calcCotisTNS(calcAbattement(remun));
@@ -509,12 +481,6 @@ function calcEI_IS(benefice, distrib, autres, parts, capital) {
                 Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
   const benefice_apres_is = resultat_is - is_du;
 
-  // Dividendes depuis le bénéfice après IS (reste distribué si distrib = 100%)
-  // On suppose que ce qui reste après IS est laissé en entreprise (sauf si demande de distribution)
-  // Dividendes = 0 ici (on distribue via rémunération seulement pour EI/IS)
-  // Seuil 10% du bénéfice net (EI/IS)
-  const seuil_div_tns = resultat_is * 0.10;
-  
   // IR au barème progressif sur la rémunération nette
   const ir_activite = calcIR(Math.max(0, remun - cotis_remun));
   
@@ -528,11 +494,10 @@ function calcEI_IS(benefice, distrib, autres, parts, capital) {
     pfu: 0,
     net_dispo: net_dispo,
     net_entreprise: net_entreprise,
-    seuil_div_tns: seuil_div_tns,
   };
 }
 
-function calcEURL_IS(benefice, distrib, autres, parts, capital) {
+function calcEURL_IS(benefice, distrib, autres, parts) {
   const remun = benefice * (distrib / 100);
   const cotis_remun = calcCotisTNS(calcAbattement(remun));
 
@@ -542,13 +507,6 @@ function calcEURL_IS(benefice, distrib, autres, parts, capital) {
                 Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
   const benefice_apres_is = resultat_is - is_du;
 
-  // Seuil 10% du capital social (EURL/IS)
-  const seuil_div_tns = capital * 0.10;
-  
-  // On suppose qu'une partie du bénéfice après IS peut être versée en dividendes
-  // Ici on laisse le bénéfice après IS en entreprise (net_entreprise)
-  // et on ne verse pas de dividendes supplémentaires (le curseur distrib pilote la remun)
-  
   // IR au barème progressif sur la rémunération nette
   const ir_activite = calcIR(Math.max(0, remun - cotis_remun));
   
@@ -562,7 +520,6 @@ function calcEURL_IS(benefice, distrib, autres, parts, capital) {
     pfu: 0,
     net_dispo: net_dispo,
     net_entreprise: net_entreprise,
-    seuil_div_tns: seuil_div_tns,
   };
 }
 
@@ -611,7 +568,7 @@ const REGIMES = [
 
 let chart = null;
 
-function buildChart(benefice_actuel, distrib, autres, parts, capital) {
+function buildChart(benefice_actuel, distrib, autres, parts) {
   const ctx = document.getElementById('chart-main').getContext('2d');
   
   const steps = [];
@@ -619,7 +576,7 @@ function buildChart(benefice_actuel, distrib, autres, parts, capital) {
   
   const datasets = REGIMES.map(r => {
     const data = steps.map(b => {
-      const res = r.fn(b, distrib, autres, parts, capital);
+      const res = r.fn(b, distrib, autres, parts);
       return Math.round(res.net_dispo);
     });
     return {
@@ -726,7 +683,6 @@ function update() {
   const autres   = +document.getElementById('rng-autres').value;
   const distrib  = +document.getElementById('rng-distrib').value;
   const parts    = 1;
-  const capital  = +document.getElementById('inp-capital').value || 1000;
 
   // Reconstitution du revenu brut social par approximations successives :
   // revenu_brut = revenu_net + cotisations, avec cotisations = f(revenu_brut)
@@ -745,7 +701,7 @@ function update() {
   // Calcul des 4 régimes
   const results = REGIMES.map(r => ({
     ...r,
-    res: r.fn(benefice, distrib, autres, parts, capital),
+    res: r.fn(benefice, distrib, autres, parts),
   }));
 
   // Métrique de comparaison : coût total des prélèvements (le plus bas gagne)
@@ -805,7 +761,7 @@ function update() {
   }).join('');
 
   // GRAPHIQUE
-  buildChart(benefice, distrib, autres, parts, capital);
+  buildChart(benefice, distrib, autres, parts);
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
@@ -813,7 +769,6 @@ function update() {
 ['rng-benefice','rng-autres','rng-distrib'].forEach(id =>
   document.getElementById(id).addEventListener('input', update)
 );
-document.getElementById('inp-capital').addEventListener('input', update);
 
 buildLegend();
 update();
