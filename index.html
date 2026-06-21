@@ -477,7 +477,8 @@ function calcEURL_IS(revenu_net, distrib, parts) {
   const is_du = Math.min(resultat_is, IS_SEUIL) * IS_REDUIT +
                 Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
   const ir = calcIR(remun_nette);
-  const net_entreprise = resultat_is - is_du;
+  // net_entreprise jamais négatif (à distribution ~100% le résultat IS tombe à 0)
+  const net_entreprise = Math.max(0, resultat_is - is_du);
   return {
     cotis: cotis,
     is: is_du,
@@ -513,7 +514,8 @@ function coutTotal(res) {
 // Pour l'IR : déjà tout sorti → surcoût nul (net_entreprise = 0).
 // Pour l'IS : cotisations TNS + IR au barème sur cette rémunération supplémentaire.
 function coutSiToutSorti(res, isIS) {
-  if (!isIS) return 0;
+  // Surcoût nul si pas IS, ou si rien n'est resté en société (net_entreprise <= 0)
+  if (!isIS || res.net_entreprise <= 0) return 0;
   const remun_comp = res.net_entreprise;
   const cotis_comp = calcCotisTNS(calcAbattement(remun_comp));
   const ir_comp    = calcIR(Math.max(0, remun_comp - cotis_comp));
