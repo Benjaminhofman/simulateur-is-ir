@@ -158,33 +158,6 @@
   .capital-row input[type=number]:focus { border-color: var(--jaune); }
   .euro-sign { color: var(--gris4); font-family: 'DM Mono', monospace; }
 
-  /* SEUIL ENCADRE */
-  .seuil-box {
-    border: 1px solid #1a6ef5;
-    background: #eef3ff;
-    padding: 20px;
-    margin-top: auto;
-  }
-  .seuil-titre {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    color: var(--gris4);
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-  .seuil-texte {
-    font-size: 13px;
-    color: var(--blanc2);
-    line-height: 1.7;
-  }
-  .seuil-chiffre {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 15px;
-    color: #1a6ef5;
-  }
-
   /* PANNEAU DROIT */
   .panel-right {
     padding: 36px 40px;
@@ -386,11 +359,6 @@
           <span class="euro-sign">€</span>
         </div>
       </div>
-    </div>
-
-    <div class="seuil-box">
-      <div class="seuil-titre">Seuil de bascule IS / IR</div>
-      <div class="seuil-texte" id="seuil-texte">Calculez pour voir le seuil.</div>
     </div>
 
   </aside>
@@ -745,22 +713,6 @@ function buildLegend() {
   `).join('');
 }
 
-// ─── SEUIL DE BASCULE ────────────────────────────────────────────────────────
-
-function findSeuilBascule(distrib, autres, parts, capital, tmi) {
-  // Cherche où EURL/IS dépasse EURL/IR
-  let seuilIS = null;
-  for (let b = 15000; b <= 300000; b += 1000) {
-    const ir = calcEURL_IR(b, distrib, autres, parts, capital, tmi).net_dispo;
-    const is = calcEURL_IS(b, distrib, autres, parts, capital, tmi).net_dispo;
-    if (is > ir && seuilIS === null) {
-      seuilIS = b;
-      break;
-    }
-  }
-  return seuilIS;
-}
-
 // ─── MISE À JOUR UI ──────────────────────────────────────────────────────────
 
 function update() {
@@ -836,23 +788,6 @@ function update() {
       </tr>
     `;
   }).join('');
-
-  // SEUIL
-  const seuil = findSeuilBascule(distrib, autres, parts, capital, tmi);
-  const seuilEl = document.getElementById('seuil-texte');
-  if (seuil === null) {
-    seuilEl.innerHTML = `En dessous de 300k€ de bénéfice, l'IS n'est pas avantageux avec ces paramètres.`;
-  } else if (benefice < seuil) {
-    seuilEl.innerHTML = `
-      Votre bénéfice actuel (${fmtK(benefice)}) est <em style="color:var(--blanc2)">en dessous</em> du seuil.<br>
-      L'IS devient favorable à partir de <span class="seuil-chiffre">${fmtK(seuil)}</span> de bénéfice brut.
-    `;
-  } else {
-    seuilEl.innerHTML = `
-      Vous êtes <em style="color:var(--vert)">au-dessus</em> du seuil de bascule.<br>
-      L'IS est plus favorable depuis <span class="seuil-chiffre">${fmtK(seuil)}</span>.
-    `;
-  }
 
   // GRAPHIQUE
   buildChart(benefice, distrib, autres, parts, capital, tmi);
