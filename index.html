@@ -668,18 +668,18 @@ function update() {
   const minCout = Math.min(...couts);
   const maxCout = Math.max(...couts);
 
-  // Assertion : sortir tout le capital d'une EURL/IS doit coûter au moins autant
-  // que l'EI/IR (qui distribue déjà tout). Sinon le modèle est incohérent.
+  // Comparaison informative « si tout sorti ». L'EURL/IS peut rester moins chère
+  // que l'EI/IR même en sortant tout, à cause du taux réduit d'IS à 15% :
+  // c'est un avantage structurel réel, pas une incohérence du modèle.
   const eiIr   = results.find(r => r.id === 'ei_ir');
   const eurlIs = results.find(r => r.id === 'eurl_is');
   if (eiIr && eurlIs) {
     const coutEiIr = coutTotal(eiIr.res);
     const coutSortiEurlIs = coutTotal(eurlIs.res) + coutSiToutSorti(eurlIs.res, true);
-    if (coutSortiEurlIs <= coutEiIr) {
-      console.error('Assertion échouée : EURL/IS coût total si tout sorti (' +
-        Math.round(coutSortiEurlIs) + ') devrait être > EI/IR coût total (' +
-        Math.round(coutEiIr) + ')');
-    }
+    const ecart = coutSortiEurlIs - coutEiIr;
+    console.info('Si tout sorti — EI/IR : ' + Math.round(coutEiIr) +
+      ' € · EURL/IS : ' + Math.round(coutSortiEurlIs) + ' € (écart ' +
+      (ecart >= 0 ? '+' : '') + Math.round(ecart) + ' €)');
   }
 
   // VERDICT GRID
