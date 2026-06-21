@@ -530,7 +530,9 @@ function calcEURL_IS(revenu_net, distrib, parts) {
   // CSG non déductible (2,9%) réintégrée dans la base IR ; pas de CSG déductible
   const csg_non_ded_remun = assiette_brut_remun * 0.029;
   const base_ir_remun = remun_nette + csg_non_ded_remun;
-  const ir = calcIR(base_ir_remun);
+  // Déduction forfaitaire 10% (gérant majoritaire, art. 62 CGI), plafond 14555€ / plancher 509€
+  const abattement_10 = Math.min(Math.max(0.10 * base_ir_remun, 509), 14555);
+  const ir = calcIR(base_ir_remun - abattement_10);
   // net_entreprise jamais négatif (à distribution ~100% le résultat IS tombe à 0)
   const net_entreprise = Math.max(0, resultat_is - is_du);
   return {
