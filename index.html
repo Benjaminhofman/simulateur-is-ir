@@ -232,7 +232,7 @@
   /* HIGHLIGHT GAGNANT */
   .verdict {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 1px;
     background: var(--gris2);
     border: 1px solid var(--gris2);
@@ -340,7 +340,7 @@
               <th>Cotisations TNS</th>
               <th>IS</th>
               <th>IR</th>
-              <th>Coût global</th>
+              <th>Coût total</th>
               <th>Taux effectif</th>
               <th>Net entreprise</th>
               <th>Surcoût sortie salaire</th>
@@ -451,87 +451,39 @@ function calcIR(revenu) {
 
 // ─── CALCUL PAR RÉGIME ───────────────────────────────────────────────────────
 
-function calcEI_IR(benefice, distrib, parts) {
-  // Tout le bénéfice = revenu exploitant, cotisations sur bénéfice
-  const cotis = calcCotisTNS(calcAbattement(benefice));
-  // IR au barème progressif sur le revenu net d'activité
-  const ir_activite = calcIR(Math.max(0, benefice - cotis));
-  const net_dispo = benefice - cotis - ir_activite;
+// EI à l'IR : tout le revenu net est perçu par l'exploitant.
+function calcEI_IR(revenu_net, distrib, parts) {
+  const brut = reconstitueBrut(revenu_net);
+  const cotis = calcCotisTNS(calcAbattement(brut));
+  const ir = calcIR(revenu_net);
   return {
     cotis: cotis,
     is: 0,
-    ir: ir_activite,
-    pfu: 0,
-    net_dispo: net_dispo,
+    ir: ir,
+    brut: brut,
+    net_dispo: revenu_net - ir,
     net_entreprise: 0,
   };
 }
 
-function calcEURL_IR(benefice, distrib, parts) {
-  // Identique EI/IR : transparence, rémunération non déductible
-  return calcEI_IR(benefice, distrib, parts);
-}
-
-function calcEI_IS(benefice, distrib, parts) {
-  // Le brut ne sert qu'à calculer les cotisations TNS totales (scénario IR).
-  // La rémunération IS est calculée sur le revenu net souhaité, pas sur le brut reconstitué.
-  const revenu_net = benefice - calcCotisTNS(calcAbattement(benefice));
-  const remun = revenu_net * (distrib / 100);
-  const brut_remun = reconstitueBrut(remun);
-  const cotis_remun = calcCotisTNS(calcAbattement(brut_remun));
-  
-  // Résultat fiscal IS = CA brut reconstitué - brut de la rémunération du dirigeant
-  const brut = benefice;
+// EURL à l'IS : le dirigeant se verse une rémunération (part distribuée du revenu net),
+// le reste du résultat est imposé à l'IS et laissé en société.
+function calcEURL_IS(revenu_net, distrib, parts) {
+  const brut = reconstitueBrut(revenu_net);
+  const remun_nette = revenu_net * (distrib / 100);
+  const brut_remun = reconstitueBrut(remun_nette);
+  const cotis = calcCotisTNS(calcAbattement(brut_remun));
   const resultat_is = Math.max(0, brut - brut_remun);
-  console.log(brut, remun, cotis_remun, resultat_is);
   const is_du = Math.min(resultat_is, IS_SEUIL) * IS_REDUIT +
                 Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
-  const benefice_apres_is = resultat_is - is_du;
-
-  // IR au barème progressif sur la rémunération nette
-  const ir_activite = calcIR(Math.max(0, remun - cotis_remun));
-  
-  const net_dispo = remun - cotis_remun - ir_activite;
-  const net_entreprise = benefice_apres_is;
-  
+  const ir = calcIR(remun_nette);
+  const net_entreprise = resultat_is - is_du;
   return {
-    cotis: cotis_remun,
+    cotis: cotis,
     is: is_du,
-    ir: ir_activite,
-    pfu: 0,
-    net_dispo: net_dispo,
-    net_entreprise: net_entreprise,
-  };
-}
-
-function calcEURL_IS(benefice, distrib, parts) {
-  // Le brut ne sert qu'à calculer les cotisations TNS totales (scénario IR).
-  // La rémunération IS est calculée sur le revenu net souhaité, pas sur le brut reconstitué.
-  const revenu_net = benefice - calcCotisTNS(calcAbattement(benefice));
-  const remun = revenu_net * (distrib / 100);
-  const brut_remun = reconstitueBrut(remun);
-  const cotis_remun = calcCotisTNS(calcAbattement(brut_remun));
-
-  // Résultat fiscal IS = CA brut reconstitué - brut de la rémunération du dirigeant
-  const brut = benefice;
-  const resultat_is = Math.max(0, brut - brut_remun);
-  console.log(brut, remun, cotis_remun, resultat_is);
-  const is_du = Math.min(resultat_is, IS_SEUIL) * IS_REDUIT +
-                Math.max(0, resultat_is - IS_SEUIL) * IS_NORMAL;
-  const benefice_apres_is = resultat_is - is_du;
-
-  // IR au barème progressif sur la rémunération nette
-  const ir_activite = calcIR(Math.max(0, remun - cotis_remun));
-  
-  const net_dispo = remun - cotis_remun - ir_activite;
-  const net_entreprise = benefice_apres_is;
-  
-  return {
-    cotis: cotis_remun,
-    is: is_du,
-    ir: ir_activite,
-    pfu: 0,
-    net_dispo: net_dispo,
+    ir: ir,
+    brut: brut,
+    net_dispo: remun_nette - ir,
     net_entreprise: net_entreprise,
   };
 }
@@ -550,10 +502,9 @@ function fmtPct(n) {
   return n.toFixed(1).replace('.', ',') + '%';
 }
 
-// Coût total des prélèvements obligatoires sur le bénéfice brut (métrique unique).
-// EI/IR & EURL/IR : cotisations TNS + IR.
-// EI/IS & EURL/IS : cotisations TNS + IS + IR.
-// Le PFU n'intervient pas ici : il ne joue qu'à la sortie future des dividendes.
+// Coût total des prélèvements obligatoires (métrique de comparaison).
+// EI/IR  : cotisations TNS + IR.
+// EURL/IS : cotisations TNS + IS + IR sur la rémunération.
 function coutTotal(res) {
   return res.cotis + res.is + res.ir;
 }
@@ -571,8 +522,6 @@ function coutSiToutSorti(res, isIS) {
 
 const REGIMES = [
   { id: 'ei_ir',   label: 'EI / IR',   color: '#e84060', fn: calcEI_IR   },
-  { id: 'eurl_ir', label: 'EURL / IR', color: '#4080e8', fn: calcEURL_IR },
-  { id: 'ei_is',   label: 'EI / IS',   color: '#a060e8', fn: calcEI_IS   },
   { id: 'eurl_is', label: 'EURL / IS', color: '#40c880', fn: calcEURL_IS },
 ];
 
@@ -695,37 +644,29 @@ function update() {
   const distrib  = +document.getElementById('rng-distrib').value;
   const parts    = 1;
 
-  // Reconstitution du revenu brut social par approximations successives :
-  // revenu_brut = revenu_net + cotisations, avec cotisations = f(revenu_brut)
-  let brut = revenu_net * 1.45;
-  for (let i = 0; i < 10; i++) {
-    const cotis = calcCotisTNS(calcAbattement(brut));
-    brut = revenu_net + cotis;
-  }
-  const benefice = brut;
+  // CA brut social reconstitué à partir du revenu net souhaité (pour affichage).
+  const brut = reconstitueBrut(revenu_net);
 
   document.getElementById('val-benefice').textContent = fmt(revenu_net);
   document.getElementById('val-ca-reconstitue').textContent = fmt(brut);
   document.getElementById('val-distrib').textContent  = distrib + '%';
 
-  // Calcul des 4 régimes : res = choix réel du dirigeant ; res100 = distribution
-  // forcée à 100% (tout le revenu net en rémunération) pour une comparaison équitable.
+  // Calcul des 2 régimes comparés (EI/IR vs EURL/IS) sur le même revenu net souhaité.
   const results = REGIMES.map(r => ({
     ...r,
-    res: r.fn(benefice, distrib, parts),
-    res100: r.fn(benefice, 100, parts),
+    res: r.fn(revenu_net, distrib, parts),
   }));
 
-  // Métrique de comparaison : coût global à 100% de distribution (le plus bas gagne)
-  const couts   = results.map(r => coutTotal(r.res100));
+  // Métrique de comparaison : coût total des prélèvements (le plus bas gagne)
+  const couts   = results.map(r => coutTotal(r.res));
   const minCout = Math.min(...couts);
   const maxCout = Math.max(...couts);
 
   // VERDICT GRID
   const grid = document.getElementById('verdict-grid');
   grid.innerHTML = results.map(r => {
-    const cout    = coutTotal(r.res100);
-    const taux    = benefice > 0 ? cout / benefice * 100 : 0;
+    const cout    = coutTotal(r.res);
+    const taux    = r.res.brut > 0 ? cout / r.res.brut * 100 : 0;
     const isWinner = cout === minCout;
     const isWorst  = cout === maxCout;
     return `
@@ -749,8 +690,8 @@ function update() {
   // TABLEAU DÉTAILLÉ
   const tbody = document.getElementById('detail-tbody');
   tbody.innerHTML = results.map(r => {
-    const cout      = coutTotal(r.res100);
-    const taux      = benefice > 0 ? cout / benefice * 100 : 0;
+    const cout      = coutTotal(r.res);
+    const taux      = r.res.brut > 0 ? cout / r.res.brut * 100 : 0;
     const isISReg   = r.id.endsWith('_is');
     const siTout    = coutSiToutSorti(r.res, isISReg);
     const isWinner  = cout === minCout;
@@ -761,9 +702,9 @@ function update() {
           <span class="regime-dot" style="background:${r.color}"></span>
           ${r.label}
         </td>
-        <td>${fmt(r.res100.cotis)}</td>
-        <td>${r.res100.is > 0 ? fmt(r.res100.is) : '—'}</td>
-        <td>${fmt(r.res100.ir)}</td>
+        <td>${fmt(r.res.cotis)}</td>
+        <td>${r.res.is > 0 ? fmt(r.res.is) : '—'}</td>
+        <td>${fmt(r.res.ir)}</td>
         <td class="net-val">${fmt(cout)}</td>
         <td class="net-val">${fmtPct(taux)}</td>
         <td>${fmt(r.res.net_entreprise)}</td>
@@ -773,7 +714,7 @@ function update() {
   }).join('');
 
   // GRAPHIQUE
-  buildChart(benefice, distrib, parts);
+  buildChart(revenu_net, distrib, parts);
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
