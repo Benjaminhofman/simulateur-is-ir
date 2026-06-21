@@ -581,15 +581,17 @@ function coutTotal(res) {
   return res.cotis + res.is + res.ir;
 }
 
-// Coût total si l'on distribue aussi tout le capital resté en société (dividendes).
+// Coût total si l'on sort aussi tout le capital resté en société.
 // Pour l'IR : déjà tout sorti → identique au coût total.
-// Pour l'IS : les dividendes sont imposés au PFU (31,4%), plus les cotisations
-// TNS sur la part de dividendes dépassant le seuil de 10%.
+// Pour l'IS : sortie en rémunération complémentaire (et non en dividendes) :
+// cotisations TNS + IR au barème sur cette rémunération supplémentaire.
 function coutSiToutSorti(res, isIS) {
   if (!isIS) return coutTotal(res);
-  const irSortie    = res.net_entreprise * PFU;
-  const cotisSortie = calcCotisTNS(Math.max(0, res.net_entreprise - (res.seuil_div_tns || 0)));
-  return coutTotal(res) + irSortie + cotisSortie;
+  const remun_comp = res.net_entreprise;
+  // calcCotisTNS applique déjà l'abattement 26% en interne
+  const cotis_comp = calcCotisTNS(remun_comp);
+  const ir_comp    = calcIR(Math.max(0, remun_comp - cotis_comp));
+  return coutTotal(res) + cotis_comp + ir_comp;
 }
 
 const REGIMES = [
