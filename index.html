@@ -344,6 +344,7 @@
               <th>Taux effectif</th>
               <th>Net entreprise</th>
               <th>Surcoût sortie salaire</th>
+              <th>Net final poches</th>
             </tr>
           </thead>
           <tbody id="detail-tbody"></tbody>
@@ -525,6 +526,12 @@ function coutSiToutSorti(res, isIS) {
   return surcout;
 }
 
+// Net réellement perçu par le dirigeant s'il sort tout (rémunération + capital société).
+// net_final = net perso + (net entreprise - surcoût de sortie).
+function netFinal(res, isIS) {
+  return res.net_dispo + res.net_entreprise - coutSiToutSorti(res, isIS);
+}
+
 const REGIMES = [
   { id: 'ei_ir',   label: 'EI / IR',   color: '#e84060', fn: calcEI_IR   },
   { id: 'eurl_is', label: 'EURL / IS', color: '#40c880', fn: calcEURL_IS },
@@ -662,32 +669,32 @@ function update() {
     res: r.fn(revenu_net, distrib, parts),
   }));
 
-  // Métrique de comparaison : coût total des prélèvements (le plus bas gagne)
-  const couts   = results.map(r => coutTotal(r.res));
-  const minCout = Math.min(...couts);
-  const maxCout = Math.max(...couts);
+  // Métrique principale : net final dans les poches si tout sorti (le plus haut gagne)
+  const netsFinaux = results.map(r => netFinal(r.res, r.id.endsWith('_is')));
+  const maxNet = Math.max(...netsFinaux);
+  const minNet = Math.min(...netsFinaux);
 
   // VERDICT GRID
   const grid = document.getElementById('verdict-grid');
   grid.innerHTML = results.map(r => {
+    const isISReg = r.id.endsWith('_is');
     const cout    = coutTotal(r.res);
-    const surcout = coutSiToutSorti(r.res, r.id.endsWith('_is'));
+    const surcout = coutSiToutSorti(r.res, isISReg);
     const coutSorti = cout + surcout;
     const taux    = r.res.brut > 0 ? cout / r.res.brut * 100 : 0;
     const tauxTotal = r.res.brut > 0 ? coutSorti / r.res.brut * 100 : 0;
-    const isWinner = cout === minCout;
-    const isWorst  = cout === maxCout;
+    const netFin  = netFinal(r.res, isISReg);
+    const isWinner = netFin === maxNet;
+    const isWorst  = netFin === minNet;
     return `
       <div class="verdict-cell ${isWinner ? 'winner' : ''}">
         <div class="verdict-cell-label">${r.label}</div>
         <div class="verdict-cell-montant" style="color:${isWinner ? 'var(--vert)' : isWorst ? 'var(--rouge)' : 'var(--blanc)'}">
-          ${fmtPct(taux)}
+          ${fmt(netFin)}
         </div>
-        <div class="verdict-cell-diff" style="color:var(--blanc2)">${fmt(cout)} de prélèvements</div>
-        <div class="verdict-cell-diff" style="color:var(--blanc);margin-top:6px;font-weight:600">
-          si tout sorti&nbsp;: ${fmtPct(tauxTotal)}
-        </div>
-        <div class="verdict-cell-diff" style="color:var(--gris4)">${fmt(coutSorti)} coût total</div>
+        <div class="verdict-cell-diff" style="color:var(--blanc2)">net final dans les poches (si tout sorti)</div>
+        <div class="verdict-cell-diff" style="color:var(--gris4);margin-top:6px">taux effectif ${fmtPct(taux)} · ${fmt(cout)} de prélèvements</div>
+        <div class="verdict-cell-diff" style="color:var(--gris4)">coût si tout sorti ${fmt(coutSorti)} (${fmtPct(tauxTotal)})</div>
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gris4);line-height:1.6;margin-top:6px">
           net perso&nbsp;&nbsp;${fmt(r.res.net_dispo)}<br>
           net société&nbsp;&nbsp;${fmt(r.res.net_entreprise)}
@@ -702,12 +709,13 @@ function update() {
   // TABLEAU DÉTAILLÉ
   const tbody = document.getElementById('detail-tbody');
   tbody.innerHTML = results.map(r => {
+    const isISReg   = r.id.endsWith('_is');
     const cout      = coutTotal(r.res);
     const taux      = r.res.brut > 0 ? cout / r.res.brut * 100 : 0;
-    const isISReg   = r.id.endsWith('_is');
     const siTout    = coutSiToutSorti(r.res, isISReg);
-    const isWinner  = cout === minCout;
-    const isWorst   = cout === maxCout;
+    const netFin    = netFinal(r.res, isISReg);
+    const isWinner  = netFin === maxNet;
+    const isWorst   = netFin === minNet;
     return `
       <tr class="${isWinner ? 'best' : isWorst ? 'worst' : ''}">
         <td>
@@ -721,20 +729,22 @@ function update() {
         <td class="net-val">${fmtPct(taux)}</td>
         <td>${fmt(r.res.net_entreprise)}</td>
         <td>${fmt(siTout)}</td>
+        <td class="net-val">${fmt(netFin)}</td>
       </tr>
     `;
   }).join('');
 
-  // Ligne de synthèse : coût total si tout sorti (cout_total + surcoût) et taux total
-  const synthese = results.map(r => {
-    const coutSorti = coutTotal(r.res) + coutSiToutSorti(r.res, r.id.endsWith('_is'));
-    const tauxTotal = r.res.brut > 0 ? coutSorti / r.res.brut * 100 : 0;
-    return `${r.label} : <strong style="color:var(--blanc)">${fmt(coutSorti)}</strong> (${fmtPct(tauxTotal)})`;
-  }).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+  // Ligne de synthèse : net final dans les poches si tout sorti, par régime + écart
+  const eiR   = results.find(r => r.id === 'ei_ir');
+  const eurlR = results.find(r => r.id === 'eurl_is');
+  const netEi   = eiR   ? netFinal(eiR.res, false)  : 0;
+  const netEurl = eurlR ? netFinal(eurlR.res, true) : 0;
+  const ecart   = netEurl - netEi;
   tbody.innerHTML += `
     <tr style="border-top:2px solid var(--gris3);background:var(--gris1);">
-      <td style="font-weight:600;color:var(--blanc);font-family:'Inter',sans-serif;font-size:12px;">Coût total si tout sorti</td>
-      <td colspan="7" style="text-align:left;color:var(--blanc2);">${synthese}</td>
+      <td colspan="9" style="font-weight:600;color:var(--blanc);font-family:'Inter',sans-serif;font-size:12px;text-align:left;">
+        Net final dans les poches — EI/IR : ${fmtK(netEi)} · EURL/IS : ${fmtK(netEurl)} (écart : ${ecart >= 0 ? '+' : ''}${fmtK(ecart)})
+      </td>
     </tr>
   `;
 
