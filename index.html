@@ -497,12 +497,9 @@ function calcIR(revenu) {
 // EI à l'IR : tout le revenu net est perçu par l'exploitant.
 function calcEI_IR(revenu_net, distrib, parts) {
   const brut = reconstitueBrut(revenu_net);
-  const assiette_sociale = calcAbattement(brut);
-  const cotis = calcCotisTNS(assiette_sociale);
-  // CSG déductible (6,8% de l'assiette sociale) retirée de la base imposable IR
-  const csg_deductible = assiette_sociale * 0.068;
-  const base_ir = Math.max(0, revenu_net - csg_deductible);
-  const ir = calcIR(base_ir);
+  const cotis = calcCotisTNS(calcAbattement(brut));
+  // Pas de déduction CSG ici : la CSG est déjà intégrée dans les cotisations TNS
+  const ir = calcIR(revenu_net);
   return {
     cotis: cotis,
     is: 0,
