@@ -494,10 +494,10 @@ function calcIR(revenuImposable, parts) {
   return Math.max(0, impot * parts);
 }
 
-function calcCotisTNS(base) {
-  // base = revenu sur lequel s'applique l'abattement 26%
-  const assiette = base * (1 - ABATTEMENT_TNS);
-  return assiette * TAUX_TNS_MOY;
+function calcCotisTNS(assiette) {
+  // assiette = revenu × 0.74 déjà calculé en amont
+  const PASS = 46368;
+  // postes à compléter
 }
 
 // ─── CALCUL PAR RÉGIME ───────────────────────────────────────────────────────
