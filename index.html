@@ -518,9 +518,8 @@ function calcEI_IS(benefice, distrib, autres, parts, capital, tmi) {
   // Seuil 10% du bénéfice net (EI/IS)
   const seuil_div_tns = resultat_is * 0.10;
   
-  // IR sur rémunération nette : taux marginal (TMI) saisi par l'utilisateur
-  const remun_nette = Math.max(0, remun - cotis_remun);
-  const ir_activite = remun_nette * (tmi / 100);
+  // IR au barème progressif sur la rémunération nette
+  const ir_activite = calcIR(Math.max(0, remun - cotis_remun));
   
   const net_dispo = remun - cotis_remun - ir_activite;
   const net_entreprise = benefice_apres_is;
@@ -553,9 +552,8 @@ function calcEURL_IS(benefice, distrib, autres, parts, capital, tmi) {
   // Ici on laisse le bénéfice après IS en entreprise (net_entreprise)
   // et on ne verse pas de dividendes supplémentaires (le curseur distrib pilote la remun)
   
-  // IR sur rémunération nette : taux marginal (TMI) saisi par l'utilisateur
-  const remun_nette = Math.max(0, remun - cotis_remun);
-  const ir_activite = remun_nette * (tmi / 100);
+  // IR au barème progressif sur la rémunération nette
+  const ir_activite = calcIR(Math.max(0, remun - cotis_remun));
   
   const net_dispo = remun - cotis_remun - ir_activite;
   const net_entreprise = benefice_apres_is;
