@@ -340,7 +340,7 @@
               <th>Cotisations TNS</th>
               <th>IS</th>
               <th>IR</th>
-              <th>Coût total</th>
+              <th>Coût global</th>
               <th>Taux effectif</th>
               <th>Net entreprise</th>
               <th>Surcoût sortie salaire</th>
@@ -695,21 +695,23 @@ function update() {
   document.getElementById('val-ca-reconstitue').textContent = fmt(brut);
   document.getElementById('val-distrib').textContent  = distrib + '%';
 
-  // Calcul des 4 régimes
+  // Calcul des 4 régimes : res = choix réel du dirigeant ; res100 = distribution
+  // forcée à 100% (tout le revenu net en rémunération) pour une comparaison équitable.
   const results = REGIMES.map(r => ({
     ...r,
     res: r.fn(benefice, distrib, parts),
+    res100: r.fn(benefice, 100, parts),
   }));
 
-  // Métrique de comparaison : coût total des prélèvements (le plus bas gagne)
-  const couts   = results.map(r => coutTotal(r.res));
+  // Métrique de comparaison : coût global à 100% de distribution (le plus bas gagne)
+  const couts   = results.map(r => coutTotal(r.res100));
   const minCout = Math.min(...couts);
   const maxCout = Math.max(...couts);
 
   // VERDICT GRID
   const grid = document.getElementById('verdict-grid');
   grid.innerHTML = results.map(r => {
-    const cout    = coutTotal(r.res);
+    const cout    = coutTotal(r.res100);
     const taux    = benefice > 0 ? cout / benefice * 100 : 0;
     const isWinner = cout === minCout;
     const isWorst  = cout === maxCout;
@@ -734,7 +736,7 @@ function update() {
   // TABLEAU DÉTAILLÉ
   const tbody = document.getElementById('detail-tbody');
   tbody.innerHTML = results.map(r => {
-    const cout      = coutTotal(r.res);
+    const cout      = coutTotal(r.res100);
     const taux      = benefice > 0 ? cout / benefice * 100 : 0;
     const isISReg   = r.id.endsWith('_is');
     const siTout    = coutSiToutSorti(r.res, isISReg);
@@ -746,9 +748,9 @@ function update() {
           <span class="regime-dot" style="background:${r.color}"></span>
           ${r.label}
         </td>
-        <td>${fmt(r.res.cotis)}</td>
-        <td>${r.res.is > 0 ? fmt(r.res.is) : '—'}</td>
-        <td>${fmt(r.res.ir)}</td>
+        <td>${fmt(r.res100.cotis)}</td>
+        <td>${r.res100.is > 0 ? fmt(r.res100.is) : '—'}</td>
+        <td>${fmt(r.res100.ir)}</td>
         <td class="net-val">${fmt(cout)}</td>
         <td class="net-val">${fmtPct(taux)}</td>
         <td>${fmt(r.res.net_entreprise)}</td>
